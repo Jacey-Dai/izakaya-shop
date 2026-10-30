@@ -9,7 +9,7 @@
 | 产品负责人 | Jacey（所有产品决策由 Jacey 拍板） |
 | 仓库 | https://github.com/Jacey-Dai/izakaya-shop |
 | 线上地址 | https://jacey-dai.github.io/izakaya-shop/ （需在仓库 Settings → Pages 开启） |
-| 当前版本 | v0.1.6（微缩手作；部署资源版本与透明点击层兜底） |
+| 当前版本 | v0.1.7（完整榻榻米房间与座位驱动镜头切换） |
 | 文档更新 | 2026-10-30 |
 
 ---
@@ -89,6 +89,7 @@
 
 ### F-01 店内场景
 - 场景是 `index.html` 里的一张内联 SVG（`viewBox="0 0 1200 800"`），使用本地微缩场景底图与独立角色。桌面随窗口等比缩放；≤600px 场景保留 840px 宽，可横向滑动，页面本身不横向溢出。
+- 两个房间分别位于 `#scene-counter` / `#scene-tatami`。`updateRoom(seat)` 切换 SVG 图层、标签、可访问状态及手机滚动位置。桌面同为 1200×800；手机上座敷全景适配宽度，吧台保留横向滑动。
 - 可互动物体是 `<g class="hotspot" data-id="...">`。同一个 `data-id` 可以出现多次（例如吧台凳和榻榻米都是 `seats`），悬停任意一个会一起高亮。
 - 装饰物不是热点；灯笼光晕、蒸汽与角色呼吸为 CSS 动画。场景下方另有菜单、鱼柜、师傅、抽签快捷入口，手机和键盘也能直接访问。
 - **AC**：每个热点悬停时有发光高亮和提示气泡（标题 + 说明，来自 `SHOP_DATA.hotspots`）；点击打开对应视图；Tab 可聚焦，Enter/空格可打开。
@@ -125,7 +126,12 @@
 ### F-09 座位
 - 两种：吧台席 `counter`、和室座敷 `tatami`（数据在 `SHOP_DATA.seats`）。
 - 选座后保存到本地，顶栏显示，客人形象（F-13）坐到该座位的 `marker` 坐标上。
-- **AC**：未选座时下单，会先跳到选座，选完自动回到订单。
+- 选择 `tatami` 后，镜头切换到独立的完整和室场景：榻榻米、中央矮桌、多面坐垫、障子窗与庭院、壁龛。不是对原来角落裁切放大。选择 `counter` 时恢复原吧台视角。
+- 顶部房间名称同步更新；座敷提供“回到吧台席”按钮，会同时将座位改回 `counter`。座位选择弹窗仍可双向切换。
+- 镜头由现有 `kobune.seat` 派生，无新增存档；刷新、语言切换及既有座敷存档均恢复完整座敷视角。
+- 桌面菜单、茶具、空刺身盘、服务铃、招财猫、挂轴、木札、黑板与入口沿用原视图；服务铃呼叫春田，空盘打开自选鱼生。快捷按钮在两个房间中均可用。保留当前订单、图鉴与形象。
+- 切换使用 0.55 秒淡入，减少动态效果时立即切换；隐藏房间从键盘 Tab 顺序和无障碍树移除，返回后焦点落到座位按钮。
+- **AC**：未选座时下单，会先跳到选座，选完自动回到订单；选择座敷立即显示独立完整房间，刷新后保持；切回吧台不清空订单或进度；两个房间的入口均可点击和键盘操作。
 
 ### F-10 订单与下单
 - 订单行：名称、备注、数量加减（减到 0 删除）、小计；合计。
@@ -242,7 +248,7 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 ### 6.1 约束
 - 纯 HTML / CSS / 原生 JS，不引入框架和构建工具；外部网络资源只用 Google Fonts（不可用时使用系统字体）。场景与角色资源随仓库本地提供，`file://` 可用。
 - 要能直接用 `file://` 打开（所以不用 ES module 的 `import`，用普通 `<script>` 按顺序加载）。
-- 本地 CSS 与所有 JS 统一使用 `?v=20261030-2` 发布版本。以后修改 CSS / JS 必须同步递增这些 URL 的版本，避免新 HTML 混用旧缓存；直接打开 `file://` 仍使用同一文件。SVG 热点在标记内声明透明 fill / stroke，提示圆点声明默认 opacity=0；即使样式缺失也不能出现不透明黑块。
+- 本地 CSS 与所有 JS 统一使用 `?v=20261030-3` 发布版本。以后修改 CSS / JS 必须同步递增这些 URL 的版本，避免新 HTML 混用旧缓存；直接打开 `file://` 仍使用同一文件。SVG 热点在标记内声明透明 fill / stroke，提示圆点声明默认 opacity=0；即使样式缺失也不能出现不透明黑块。
 - 脚本加载顺序：`i18n.js` → `data.js` → `data.en.js` → `art.js` → `app.js`。
 
 ### 6.2 文件
@@ -280,7 +286,7 @@ views.<id> = {
 - 纸张颗粒来自 `index.html` 里的 `#kb-grain` 滤镜，只加在食物插画上。
 
 ### 6.4 公共函数（app.js 内）
-`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`swatchHTML(fish, n)`（刺身）、`sushiHTML(fish)`（握寿司）、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`chefSVG()`、`itemArt(menuItem)`、`store.get/set`。
+`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`swatchHTML(fish, n)`（刺身）、`sushiHTML(fish)`（握寿司）、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`chefSVG()`、`updateRoom(seat)`、`chooseSeat(id)`、`itemArt(menuItem)`、`store.get/set`。
 语言相关：`t(key, vars)` 取界面文案；`fishName(f)`、`fishText(f, field)`、`itemName(it)`、`itemDesc(it)`、`seatName(s)`、`rarityName(r)`、`chefLine(key, i?)` 取当前语言的内容；`applyLang()` 刷新整页。
 CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: string[], counts? }`。名称和备注不存死，显示时由 `lineName(l)` / `lineNote(l)` 按当前语言生成。
 
@@ -346,8 +352,8 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
 | T-43 | 采用 C 版微缩手作场景与男性春田；整体配色、弹窗、食物与动画统一；角色 / 性别选择继续留在 T-10 | 完成（PR #4 已合并） | Jacey 2026-10-30 确认 | assets/、index.html、css/、js/、PRD | 原有热点与点餐流程保留；中英、手机、减少动态效果及 file:// 验证；英文 PR description |
-
-| T-44 | 修复部署后新 HTML 混用旧 CSS / JS 缓存；资源版本号与热点透明兜底 | 进行中（@Codex，修复已实现，待 PR 合并） | T-43 | index.html、tests/、PRD | 热点无黑块；CSS / JS 使用新 URL；旧样式缺失时点击层仍透明 |
+| T-44 | 修复部署后新 HTML 混用旧 CSS / JS 缓存；资源版本号与热点透明兜底 | 完成（PR #5 已合并） | T-43 | index.html、tests/、PRD | 热点无黑块；CSS / JS 使用新 URL；旧样式缺失时点击层仍透明 |
+| T-45 | 选择和室座敷后切换到独立完整榻榻米视角，吧台与座敷双向切换；保留点餐和存档 | 进行中（@Codex，已实现并通过浏览器回归，待 PR 合并） | Jacey 2026-10-30 授权 | assets/、index.html、app.js、css/、i18n.js、tests/ | 座敷全景；选座与刷新同步镜头；热点、双语、手机、减少动态效果可用 |
 
 ### v0.2 协作基础与打磨
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
@@ -459,6 +465,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 文件 | 来源 | 作者 | 授权 |
 | --- | --- | --- | --- |
 | `assets/art/izakaya-room.webp` | OpenAI ImageGen，本次按 Jacey 已选 C 概念图生成的无人物场景 | AI 生成，Codex 编排 | 用户授权用于本仓库；不包含参考素材站原图，无第三方素材署名要求；不宣称独占著作权 |
+| `assets/art/tatami-room.webp` | OpenAI ImageGen，以现有小舟场景为视觉参考生成的独立完整座敷 | AI 生成，Codex 编排 | 用户授权用于本仓库；原创生成，不含第三方素材站原图 |
 | `assets/art/haruta.webp` | OpenAI ImageGen，本次生成的原创男性板前角色，透明背景 | AI 生成，Codex 编排 | 同上；与场景共用微缩手作风格 |
 
 ---
@@ -473,4 +480,5 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 2026-10-30 | v0.1.3 | 春田师傅按新画风重绘（Q 版、传统板前服）；新增女性厨师形象，供 T-10 玩家当厨师时选择 |
 | 2026-10-30 | v0.1.2 | 新增 F-14 中英双语；PRD 加入存档局限与方案（§5.5）、昼夜 / 季节旬鱼、氛围音、师傅小剧场、套组印章与御朱印卡、套餐与手写小票、素材来源（§11） |
 | 2026-10-30 | v0.1.5 | T-43：C 版微缩手作美术重制，本地场景 + 男性春田独立素材、暖色界面、食物渐变和材质、细微动态、手机场景滑动与快捷入口；保留现有玩法，T-10 玩家角色 / 性别选择仍未实现 |
-| 2026-10-30 | v0.1.6 | T-44：CSS / JS 统一资源版本，避免部署后混用旧缓存；SVG 热点增加原生透明兜底，新增无样式与资源 URL 回归检查。当前执行环境断连，本次新增浏览器检查尚未运行。 |
+| 2026-10-30 | v0.1.6 | T-44：CSS / JS 统一资源版本，避免部署后混用旧缓存；SVG 热点增加原生透明兜底，新增无样式与资源 URL 回归检查。最初因环境断连未运行；T-45 恢复运行环境后纳入完整浏览器回归。 |
+| 2026-10-30 | v0.1.7 | T-45：独立完整榻榻米场景；镜头跟随已保存座位；双向换座、全套热点与快捷入口、手机全景及减少动态效果；保留现有订单与收集数据 |

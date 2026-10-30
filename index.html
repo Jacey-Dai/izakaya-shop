@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Yuji+Syuku&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <!-- 发布 CSS / JS 改动时同步递增资源版本，避免新 HTML 混用旧缓存。 -->
-  <link rel="stylesheet" href="css/style.css?v=20261030-2">
+  <link rel="stylesheet" href="css/style.css?v=20261030-3">
 </head>
 <body>
   <header class="hud">
@@ -31,6 +31,10 @@
   <main class="stage">
     <p class="hint" data-i18n="hint">将鼠标移到店内各处探索，点击即可互动</p>
 
+    <div class="room-bar">
+      <p id="room-status" aria-live="polite"></p>
+      <button class="room-return" id="back-counter" hidden data-i18n="room.back">回到吧台席</button>
+    </div>
     <div class="scene-scroll">
       <svg class="scene" viewBox="0 0 1200 800" role="group" aria-label="小舟店内">
         <defs>
@@ -39,6 +43,7 @@
           <linearGradient id="guest-cloth"><stop stop-color="#fff" stop-opacity=".28"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#201e2a" stop-opacity=".25"/></linearGradient>
           <filter id="guest-soft"><feDropShadow dx="2" dy="4" stdDeviation="2" flood-color="#382519" flood-opacity=".3"/></filter>
         </defs>
+        <g id="scene-counter" class="room-layer" data-room="counter">
         <!-- 原创微缩场景底图；所有点击区域与绘制坐标共用一个 viewBox。 -->
         <image class="room-art" href="assets/art/izakaya-room.webp" width="1200" height="800"/>
         <g class="ambient-light" pointer-events="none"><ellipse cx="312" cy="140" rx="130" ry="160" fill="url(#lamp-light)"/><ellipse cx="930" cy="140" rx="130" ry="160" fill="url(#lamp-light)"/></g>
@@ -57,7 +62,23 @@
         <g class="hotspot" data-id="seats"><rect class="hit-area" fill="transparent" stroke="transparent" x="303" y="557" width="574" height="113" rx="25"/><circle class="hotspot-dot" opacity="0" cx="597" cy="588" r="7"/></g>
         <g class="hotspot" data-id="seats"><path class="hit-area" fill="transparent" stroke="transparent" d="M990 516 L1200 570 L1200 729 L978 655 Z"/><circle class="hotspot-dot" opacity="0" cx="1047" cy="561" r="7"/></g>
         <g class="hotspot" data-id="tablemenu"><path class="hit-area" fill="transparent" stroke="transparent" d="M1100 465 L1147 470 L1141 528 L1096 524 Z"/><circle class="hotspot-dot" opacity="0" cx="1122" cy="504" r="5"/></g>
-        <!-- 客人保留所有自定义选项和存档，座位坐标与新场景匹配。 -->
+        </g>
+        <!-- 独立完整座敷视角，与吧台视角共用菜单、点餐及收集逻辑。 -->
+        <g id="scene-tatami" class="room-layer" data-room="tatami" display="none" aria-hidden="true">
+          <image class="room-art" href="assets/art/tatami-room.webp" width="1200" height="800"/>
+          <g class="ambient-light" pointer-events="none"><ellipse cx="355" cy="125" rx="150" ry="180" fill="url(#lamp-light)"/><ellipse cx="940" cy="125" rx="150" ry="180" fill="url(#lamp-light)"/></g>
+          <g class="hotspot" data-id="noren"><rect class="hit-area" fill="transparent" stroke="transparent" x="20" y="60" width="215" height="450" rx="10"/></g>
+          <g class="hotspot" data-id="tags"><rect class="hit-area" fill="transparent" stroke="transparent" x="270" y="180" width="140" height="100" rx="8"/></g>
+          <g class="hotspot" data-id="board"><rect class="hit-area" fill="transparent" stroke="transparent" x="55" y="490" width="115" height="165" rx="8"/></g>
+          <g class="hotspot" data-id="zukan"><rect class="hit-area" fill="transparent" stroke="transparent" x="975" y="90" width="100" height="255" rx="10"/></g>
+          <g class="hotspot" data-id="neko"><rect class="hit-area" fill="transparent" stroke="transparent" x="955" y="345" width="65" height="75" rx="18"/></g>
+          <g class="hotspot" data-id="tablemenu"><rect class="hit-area" fill="transparent" stroke="transparent" x="450" y="440" width="75" height="80" rx="8"/></g>
+          <g class="hotspot" data-id="chef"><rect class="hit-area" fill="transparent" stroke="transparent" x="535" y="490" width="65" height="50" rx="20"/></g>
+          <g class="hotspot" data-id="drinks"><rect class="hit-area" fill="transparent" stroke="transparent" x="610" y="440" width="125" height="80" rx="12"/></g>
+          <g class="hotspot" data-id="fishcase"><ellipse class="hit-area" fill="transparent" stroke="transparent" cx="835" cy="510" rx="80" ry="28"/></g>
+          <g class="hotspot" data-id="seats"><ellipse class="hit-area" fill="transparent" stroke="transparent" cx="285" cy="590" rx="100" ry="65"/></g>
+        </g>
+        <!-- 客人保留所有自定义选项和存档，座位坐标与当前视角匹配。 -->
         <g id="guest" class="hotspot" data-id="guest" style="display:none"></g>
       </svg>
     </div>
@@ -92,10 +113,10 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script src="js/i18n.js?v=20261030-2"></script>
-  <script src="js/data.js?v=20261030-2"></script>
-  <script src="js/data.en.js?v=20261030-2"></script>
-  <script src="js/art.js?v=20261030-2"></script>
-  <script src="js/app.js?v=20261030-2"></script>
+  <script src="js/i18n.js?v=20261030-3"></script>
+  <script src="js/data.js?v=20261030-3"></script>
+  <script src="js/data.en.js?v=20261030-3"></script>
+  <script src="js/art.js?v=20261030-3"></script>
+  <script src="js/app.js?v=20261030-3"></script>
 </body>
 </html>

@@ -5,6 +5,9 @@
  */
 window.I18N = {
   zh: {
+    "room.counter": "吧台 · 灯火下的小舟",
+    "room.tatami": "和室座敷 · 今晚慢慢吃",
+    "room.back": "回到吧台席",
     "scene.menu": "翻开菜单",
     "scene.fish": "自选鱼生",
     "scene.chef": "和春田聊聊",
@@ -129,6 +132,9 @@ window.I18N = {
   },
 
   en: {
+    "room.counter": "Counter · A little warmth at Kobune",
+    "room.tatami": "Tatami room · Settle in and stay awhile",
+    "room.back": "Move to the counter",
     "scene.menu": "Browse the menu",
     "scene.fish": "Build a sashimi plate",
     "scene.chef": "Chat with Haruta",
