@@ -194,6 +194,46 @@
     setTimeout(() => el.remove(), 2600);
   }
 
+  // 镜头只从已有 seat 派生，刷新与旧存档无需新增状态或迁移。
+  function updateRoom(seat) {
+    const room = seat && seat.id === "tatami" ? "tatami" : "counter";
+    const scene = $(".scene");
+    const changed = scene.dataset.room !== room;
+    scene.dataset.room = room;
+    scene.setAttribute("aria-label", t("room." + room));
+    $$(".room-layer").forEach((layer) => {
+      const active = layer.dataset.room === room;
+      layer.setAttribute("display", active ? "inline" : "none");
+      layer.setAttribute("aria-hidden", String(!active));
+      layer.classList.toggle("is-active", active);
+      $$(".hotspot", layer).forEach((hotspot) => hotspot.setAttribute("tabindex", active ? "0" : "-1"));
+    });
+    $("#room-status").textContent = t("room." + room);
+    $("#back-counter").hidden = room !== "tatami";
+    if (changed) {
+      $("#tooltip").hidden = true;
+      $$(".hotspot.linked").forEach((el) => el.classList.remove("linked"));
+      const scroll = $(".scene-scroll");
+      scroll.scrollLeft = room === "counter" ? Math.max(0, (scene.clientWidth - scroll.clientWidth) / 2) : 0;
+      if (document.activeElement && document.activeElement.closest(".room-layer[aria-hidden='true']")) $("#hud-seat").focus();
+    }
+  }
+
+  function chooseSeat(id) {
+    const seat = D.seats.find((s) => s.id === id);
+    if (!seat) return;
+    state.seat = seat.id;
+    store.set("seat", state.seat);
+    updateHud();
+    toast(t("toast.seated", { name: seatName(seat) }));
+  }
+
+  $("#back-counter").addEventListener("click", () => {
+    chooseSeat("counter");
+    // 回程按钮隐藏后将焦点交给一直可用的座位按钮。
+    $("#hud-seat").focus();
+  });
+
   function updateHud() {
     const count = state.cart.reduce((s, l) => s + l.qty, 0);
     const cartBtn = $("#hud-cart");
@@ -202,6 +242,7 @@
     $("#hud-seat").textContent = t("hud.seat", { name: seat ? seatName(seat) : t("hud.seatNone") });
     $("#hud-zukan").textContent = t("hud.zukan", { n: state.collected.size, total: D.fish.length });
 
+    updateRoom(seat);
     const guest = $("#guest");
     if (seat) {
       guest.setAttribute("transform", `translate(${seat.marker[0]} ${seat.marker[1]})`);
@@ -552,11 +593,7 @@
       </div>`,
     mount: (then) => {
       $$(".seat-card", body).forEach((c) => c.addEventListener("click", () => {
-        state.seat = c.dataset.seat;
-        store.set("seat", state.seat);
-        updateHud();
-        const s = D.seats.find((x) => x.id === state.seat);
-        toast(t("toast.seated", { name: seatName(s) }));
+        chooseSeat(c.dataset.seat);
         if (then) open(then); else close();
       }));
     },
