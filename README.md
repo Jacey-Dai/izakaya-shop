@@ -1,6 +1,6 @@
 # 小舟 · Kobune Sushi
 
-一家可以“走进去”的日式寿司小店网页。把鼠标移到店里的东西上探索，点击即可互动。
+一家可以“走进去”的微缩手作风日式寿司小店网页。把鼠标移到店里的东西上探索，点击即可互动。
 
 ## 能做什么
 
@@ -36,14 +36,15 @@ python3 -m http.server 8000
 - **加菜 / 改价格**：编辑 `js/data.js` 里的 `menu`。
 - **改师傅台词、抽签结果**：`js/data.js` 里的 `chef` 和 `omikuji`。
 - **英文**：内容翻译在 `js/data.en.js`，界面文案在 `js/i18n.js`。加中文时记得同时加英文。
-- **改场景**：`index.html` 里的 `<svg class="scene">`。每个可互动的东西是一个
+- **改场景**：本地 `assets/art/izakaya-room.webp` 底图、`assets/art/haruta.webp` 男性春田角色，以及 `index.html` 里的 `<svg class="scene">` 热点图层。美术来源在 PRD §11 登记。每个可互动的东西是一个
   `<g class="hotspot" data-id="...">`，悬停提示写在 `data.js` 的 `hotspots` 里，
   点击后打开 `js/app.js` 里同名的 `views.<id>`。
 
 ## 文件结构
 
 ```
-index.html      页面和店内场景（SVG）
+assets/art/     本地微缩场景与男性师傅 WebP
+index.html      页面和店内场景（SVG 热点 + 素材图层）
 css/style.css   样式
 js/i18n.js      界面文案（中 / 英）
 js/data.js      鱼、菜单、座位、台词等所有内容数据（中文）
@@ -52,3 +53,27 @@ js/app.js       交互逻辑
 docs/PRD.md     完整产品需求文档（多 agent 协作请先读）
 CLAUDE.md       给 agent 的入口说明（AGENTS.md 内容相同）
 ```
+
+## 视觉与范围（v0.1.5）
+
+采用温暖的微缩手作风：奶油白、蜂蜜木色、靛蓝、陶土红，局部暖光、棉麻与陶器质感。
+师傅轻微呼吸、蒸汽与灯光支持系统“减少动态效果”。手机上店内场景可以横向滑动，下方快捷入口方便直接点菜。
+
+当前默认角色是男性春田。“当 chef / 当顾客”和玩家性别选择仍属于 PRD T-10 的后续功能，本次不实现。
+场景和师傅素材保存在仓库本地，不需要联网加载图片或 Three.js。现有点餐、堂食 / 外带、抽签、图鉴和本地存档保持可用。
+
+## 浏览器回归检查
+
+运行环境需要 Node.js 和 Playwright（仅用于测试，应用本身没有新增依赖或构建步骤）：
+
+```bash
+# Playwright 已安装且 Chromium 可用时
+node tests/smoke.cjs
+
+# 也可复用外部安装，指定本机 Chrome
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright \
+CHROME_EXECUTABLE=/absolute/path/to/chrome \
+node tests/smoke.cjs
+```
+
+脚本直接用 `file://` 打开页面，覆盖中英热点、键盘、点餐、拼盘限制、师傅推荐、堂食 / 外带、客人自定义、存档、390px 手机弹窗和减少动态效果。截图写入 `/tmp/kobune-*.png`。

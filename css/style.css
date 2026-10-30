@@ -1,14 +1,14 @@
 :root {
-  --washi: #f4ecd8;
-  --washi-2: #ebe0c5;
-  --sumi: #2b2622;
-  --sumi-soft: #5a524a;
-  --shu: #c0392b;
-  --ai: #2c3e60;
-  --wood: #7a4b28;
-  --wood-light: #d6a86e;
+  --washi: #fff8ec;
+  --washi-2: #f0e3cd;
+  --sumi: #423831;
+  --sumi-soft: #796957;
+  --shu: #ad573f;
+  --ai: #414b61;
+  --wood: #96643e;
+  --wood-light: #dfb77d;
   --chalk-bg: #24332b;
-  --radius: 10px;
+  --radius: 22px;
   --font-body: "Noto Serif SC", "Hiragino Mincho ProN", "Songti SC", serif;
   --font-brush: "Yuji Syuku", "Noto Serif SC", serif;
   --font-chalk: "Klee One", "Noto Serif SC", serif;
@@ -19,7 +19,7 @@
 html, body { margin: 0; }
 
 body {
-  background: #1d1a17 radial-gradient(ellipse at top, #3a2b1f 0%, #1d1a17 70%);
+  background: radial-gradient(ellipse at 50% 0, #fffaf1 0, #f4e9d8 65%, #e9dac3 100%);
   color: var(--sumi);
   font-family: var(--font-body);
   min-height: 100vh;
@@ -37,7 +37,7 @@ button { font: inherit; cursor: pointer; }
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px;
-  color: var(--washi);
+  color: var(--sumi);
   position: relative;
   z-index: 45; /* 弹窗打开时顶栏仍可用（切换语言、看订单） */
 }
@@ -53,16 +53,16 @@ button { font: inherit; cursor: pointer; }
 .brand p { margin: 0; font-size: 12px; opacity: .7; letter-spacing: .08em; }
 .hud-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hud-btn {
-  background: rgba(244, 236, 216, .08);
-  color: var(--washi);
-  border: 1px solid rgba(244, 236, 216, .3);
+  background: #fffaf1;
+  color: var(--sumi);
+  border: 1px solid #ddcbb1;
   padding: 8px 14px;
   border-radius: 999px;
   transition: background .2s;
 }
-.hud-btn:hover { background: rgba(244, 236, 216, .2); }
+.hud-btn:hover { background: #f0dfc4; }
 .hud-lang { min-width: 56px; font-weight: 600; }
-.hud-cart { background: var(--shu); border-color: var(--shu); }
+.hud-cart { background: var(--shu); border-color: var(--shu); color: #fff9f0; }
 .hud-cart b {
   display: inline-block; min-width: 20px; margin-left: 4px;
   background: #fff; color: var(--shu); border-radius: 999px; font-size: 12px; padding: 0 6px;
@@ -72,11 +72,11 @@ button { font: inherit; cursor: pointer; }
 
 /* ---------- 场景 ---------- */
 .stage { max-width: 1200px; margin: 0 auto; padding: 0 16px 32px; position: relative; }
-.hint { color: var(--washi); opacity: .6; font-size: 13px; text-align: center; margin: 0 0 8px; }
+.hint { color: var(--sumi-soft); opacity: 1; font-size: 13px; text-align: center; margin: 0 0 8px; }
 .scene {
   display: block; width: 100%; height: auto;
   border-radius: var(--radius);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  box-shadow: 0 18px 50px #82532d30, 0 2px 5px #82532d30;
   background: var(--washi);
 }
 
@@ -128,7 +128,8 @@ button { font: inherit; cursor: pointer; }
 /* ---------- 弹窗 ---------- */
 .overlay {
   position: fixed; inset: 0; z-index: 40;
-  background: rgba(15, 12, 10, .65);
+  background: rgba(53, 40, 29, .55);
+  backdrop-filter: blur(7px);
   display: grid; place-items: center;
   padding: var(--hud-h, 16px) 16px 16px; /* 给顶栏留位置 */
   animation: fade .2s;
@@ -159,7 +160,7 @@ button { font: inherit; cursor: pointer; }
 
 .btn {
   border: 1px solid var(--sumi); background: transparent; color: var(--sumi);
-  padding: 8px 16px; border-radius: 6px; transition: background .15s, color .15s;
+  padding: 8px 16px; border-radius: 12px; transition: background .15s, color .15s;
 }
 .btn:hover { background: var(--sumi); color: var(--washi); }
 .btn.primary { background: var(--shu); border-color: var(--shu); color: #fff; }
@@ -409,6 +410,75 @@ button { font: inherit; cursor: pointer; }
   box-shadow: 0 8px 24px rgba(0, 0, 0, .35); font-size: 14px; animation: rise .25s ease-out;
 }
 .toast.gold { background: linear-gradient(90deg, #8a6418, #c9962a); }
+
+/* ---------- 微缩手作主题 ---------- */
+.hud { padding-top: 24px; padding-bottom: 20px; }
+.brand-mark { border-radius: 15px 15px 15px 4px; background: #ac5a42; box-shadow: inset 0 2px 2px #ffffff45, 0 3px 0 #854634; }
+.brand h1 { font-size: 30px; }
+.brand p { color: var(--sumi-soft); opacity: 1; }
+.hud-btn { box-shadow: 0 3px 0 #d7c4a6; min-height: 42px; }
+.hud-cart:hover { background: #934831; }
+.hint { margin: 0 0 14px; letter-spacing: .08em; }
+.scene-scroll { border-radius: 22px; overflow: hidden; box-shadow: 0 16px 44px #76502f26; }
+.scene { border-radius: 0; }
+.room-art { pointer-events: none; }
+.hit-area { fill: transparent; stroke: transparent; stroke-width: 3; transition: fill .25s, stroke .25s; }
+.hotspot:hover, .hotspot.linked, .hotspot:focus-visible { filter: none; }
+.hotspot:hover .hit-area, .hotspot.linked .hit-area { fill: #ffe5a714; stroke: #ffe6aa99; }
+.hotspot:focus-visible .hit-area { fill: #fff4d729; stroke: #fff4cf; stroke-width: 4; stroke-dasharray: 8 4; }
+.hotspot-dot { fill: #fff3ce; stroke: #a76d3d; stroke-width: 2; opacity: 0; transition: opacity .25s; pointer-events: none; }
+.hotspot:hover .hotspot-dot, .hotspot:focus-visible .hotspot-dot, .hotspot.linked .hotspot-dot { opacity: 1; }
+.room-sign { font-family: var(--font-brush); fill: #fff2d6; font-size: 27px; text-anchor: middle; pointer-events: none; letter-spacing: 3px; }
+.board-sign { font-family: var(--font-chalk); font-size: 17px; transform: rotate(-5deg); transform-origin: 230px 585px; }
+.menu-lettering { pointer-events: none; fill: #68462f; font-size: 14px; font-family: var(--font-brush); writing-mode: vertical-rl; letter-spacing: 3px; }
+.scene-shortcuts { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 22px 0 12px; }
+.scene-shortcuts button { border: 1px solid #dcc7a8; border-radius: 999px; background: #fff9ee; color: var(--sumi); padding: 10px 20px; box-shadow: 0 3px 0 #deccb0; transition: transform .2s, background .2s; }
+.scene-shortcuts button:hover { transform: translateY(-2px); background: #f7e7cb; }
+.scene-caption { color: var(--sumi-soft); text-align: center; font-size: 13px; letter-spacing: .08em; margin: 20px 0 0; }
+.ambient-light { animation: lantern-glow 6s ease-in-out infinite; }
+@keyframes lantern-glow { 50% { opacity: .45; } }
+.chef-idle { transform-origin: 628px 450px; animation: chef-breathe 5s ease-in-out infinite; }
+@keyframes chef-breathe { 50% { transform: translateY(-2px) rotate(.35deg); } }
+.steam { opacity: .5; animation: steam-rise 5s ease-out infinite; }
+@keyframes steam-rise { 0% { opacity: 0; transform: translateY(7px); } 35% { opacity: .45; } 100% { opacity: 0; transform: translateY(-16px); } }
+.modal { border: 1px solid #dcc7aa; box-shadow: 0 28px 90px #35271d55, inset 0 2px 0 #fffdf9; line-height: 1.65; }
+.modal.book { background: linear-gradient(120deg, #fffbf2, #f8efdf); border-color: #dac4a3; }
+.modal h2 { color: #604631; }
+.modal.board h2 { color: #f6f2e4; }
+.modal-close { background: #eadbc4; }
+.btn { border-color: #bba68c; background: #fffaf2; box-shadow: 0 2px 0 #d4bea0; }
+.btn:hover { background: #eee0c9; color: var(--sumi); }
+.btn.primary { background: var(--shu); color: #fff; box-shadow: 0 3px 0 #88422f; }
+.bubble { background: #fffdf7; border-color: #e2ceb0; border-radius: 18px; box-shadow: 0 4px 12px #93683b0a; }
+.bubble::before { background: #fffdf7; border-color: #e2ceb0; }
+.chef-portrait { width: 140px; height: 150px; border-radius: 28px; background: #f4e6d1; border: 1px solid #d9c2a0; }
+.tab.active, .mode.active, .filter button.active { background: var(--ai); color: #fff9ef; }
+.tabs { border-bottom-color: #d5bfa1; }
+.fish-btn, .drink, .seat-card, .card { border-radius: 16px; background: linear-gradient(140deg, #fffdf8, #f6ecd9); box-shadow: 0 3px 0 #dec9a9, inset 0 1px 0 #fff; }
+.fish-btn:hover, .seat-card:hover { border-color: #ae7752; }
+.card.locked { background: #eae0ce; }
+.art { overflow: visible; filter: drop-shadow(1px 3px 2px #704b2a22); }
+.plate { background: radial-gradient(circle at 43% 35%, #fffdf7 0 48%, #f2e7d3 56%, #cec8bd 59%, #59677e 60% 62%, #fffaf0 63% 66%, #d1c6b5 67%); box-shadow: 0 12px 24px #5c432727, inset -4px -5px 7px #ad9d8633; }
+.bottle { background: linear-gradient(90deg, #00000024, #ffffff44 30%, transparent 58%, #00000033), var(--c); box-shadow: 2px 3px 3px #5d48312b; }
+.guest-preview { background: radial-gradient(ellipse at 50% 30%, #fffbf2, #e6d2b3); border: 1px solid #dcc5a5; }
+button:focus-visible, .link:focus-visible { outline: 3px solid #686d50; outline-offset: 4px; }
+@media (max-width: 600px) {
+  .hud { padding: 16px 14px; gap: 14px; }
+  .hud-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 6px; }
+  .hud-btn { padding: 8px 9px; font-size: 12px; }
+  .stage { padding: 0 12px 24px; }
+  .hint { font-size: 11px; letter-spacing: 0; }
+  .scene-scroll { overflow-x: auto; border-radius: 16px; -webkit-overflow-scrolling: touch; }
+  .scene { width: 840px; max-width: none; }
+  .scene-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .scene-shortcuts button { padding: 10px 8px; font-size: 12px; }
+  .scene-caption { font-size: 11px; letter-spacing: 0; }
+  .builder, .chef-wrap, .detail, .guest-wrap { min-width: 0; }
+  .progress { min-width: 0; width: 100%; }
+  .facts { grid-template-columns: 75px minmax(0, 1fr); }
+  .facts dd, .cart-line > :first-child { overflow-wrap: anywhere; }
+  .cart-line { gap: 8px; }
+}
 
 @media (max-width: 720px) {
   .modal { padding: 20px 16px; }
