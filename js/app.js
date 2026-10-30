@@ -8,15 +8,17 @@
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
   // ---------- 本地存档（失败时静默，页面照常运行） ----------
+  // 店名改为小舟后前缀从 koharu. 换成 kobune.，读取时兼容旧存档
   const store = {
     get(key, fallback) {
       try {
-        const v = localStorage.getItem("koharu." + key);
+        let v = localStorage.getItem("kobune." + key);
+        if (v === null) v = localStorage.getItem("koharu." + key);
         return v === null ? fallback : JSON.parse(v);
       } catch { return fallback; }
     },
     set(key, value) {
-      try { localStorage.setItem("koharu." + key, JSON.stringify(value)); } catch { /* ignore */ }
+      try { localStorage.setItem("kobune." + key, JSON.stringify(value)); } catch { /* ignore */ }
     },
   };
 
@@ -35,6 +37,10 @@
   const itemById = {};
   D.menu.forEach((cat) => cat.items.forEach((it) => { itemById[it.id] = it; }));
 
+  function defaultGuest() {
+    return Object.fromEntries(Object.entries(D.guest).map(([k, opts]) => [k, opts[0].id]));
+  }
+
   // ---------- 状态 ----------
   const state = {
     cart: [],
@@ -42,6 +48,7 @@
     seat: store.get("seat", null),
     collected: new Set(store.get("zukan", [])),
     fresh: new Set(store.get("fresh", [])),
+    guest: { ...defaultGuest(), ...store.get("guest", {}) },
     luck: 0,
     omakase: null,
     menuTab: "sashimi",
@@ -64,6 +71,38 @@
   const swatchHTML = (f, n = 1) => `<div class="swatch">${sliceHTML(f).repeat(n)}</div>`;
   const rarityColor = (r) => D.rarity[r].color;
 
+  // 客人背影，原点在座位面中心，向上画
+  function guestSVG(g) {
+    const opt = (k) => D.guest[k].find((o) => o.id === g[k]) || D.guest[k][0];
+    const hair = opt("hairColor").color;
+    const cloth = opt("outfit").color;
+    const style = g.hairStyle;
+    const acc = g.accessory;
+    const back = {
+      short: "",
+      bun: `<circle cx="0" cy="-138" r="11" fill="${hair}"/>`,
+      ponytail: `<ellipse cx="0" cy="-80" rx="8" ry="20" fill="${hair}"/><rect x="-5" y="-98" width="10" height="5" rx="2" fill="#c0392b"/>`,
+      long: `<path d="M-23 -112 Q-26 -70 -20 -56 L20 -56 Q26 -70 23 -112 Z" fill="${hair}"/>`,
+    }[style] || "";
+    const extra = {
+      none: "",
+      kanzashi: `<line x1="6" y1="${style === "bun" ? -140 : -126}" x2="24" y2="${style === "bun" ? -150 : -138}" stroke="#d9a520" stroke-width="3" stroke-linecap="round"/><circle cx="25" cy="${style === "bun" ? -151 : -139}" r="4" fill="#c0392b"/>`,
+      hat: `<ellipse cx="0" cy="-122" rx="30" ry="7" fill="#d9c08a" stroke="#a08850"/><path d="M-17 -123 Q-16 -142 0 -142 Q16 -142 17 -123 Z" fill="#d9c08a" stroke="#a08850"/><rect x="-17" y="-128" width="34" height="5" fill="#c0392b"/>`,
+    }[acc] || "";
+    return `
+      <ellipse cx="0" cy="2" rx="30" ry="6" fill="rgba(0,0,0,.18)"/>
+      <path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="${cloth}"/>
+      <path d="M-12 -84 L0 -70 L12 -84" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>
+      <rect x="-31" y="-34" width="62" height="10" fill="rgba(0,0,0,.25)"/>
+      <rect x="-6" y="-94" width="12" height="12" fill="#f1c7a0"/>
+      <circle cx="-22" cy="-108" r="5" fill="#f1c7a0"/>
+      <circle cx="22" cy="-108" r="5" fill="#f1c7a0"/>
+      ${style === "long" ? back : ""}
+      <circle cx="0" cy="-112" r="23" fill="${hair}"/>
+      ${style === "long" ? "" : back}
+      ${extra}`;
+  }
+
   function toast(msg, gold = false) {
     const el = document.createElement("div");
     el.className = "toast" + (gold ? " gold" : "");
@@ -80,12 +119,13 @@
     $("#hud-seat").textContent = "座位：" + (seat ? seat.name : "未选");
     $("#hud-zukan").textContent = `图鉴 ${state.collected.size}/${D.fish.length}`;
 
-    const marker = $("#you-marker");
+    const guest = $("#guest");
     if (seat) {
-      marker.setAttribute("transform", `translate(${seat.marker[0]} ${seat.marker[1]})`);
-      marker.style.display = "";
+      guest.setAttribute("transform", `translate(${seat.marker[0]} ${seat.marker[1]})`);
+      guest.innerHTML = guestSVG(state.guest);
+      guest.style.display = "";
     } else {
-      marker.style.display = "none";
+      guest.style.display = "none";
     }
   }
 
@@ -161,6 +201,7 @@
         <li><b>春田师傅</b>：聊天，或者让他来一份おまかせ</li>
         <li><b>挂轴</b>：鱼图鉴。吃过的鱼会被收录，有些鱼只有师傅推荐才遇得到</li>
         <li><b>招财猫</b>：抽签，好运会影响师傅推荐</li>
+        <li><b>你自己</b>：选座后你会坐在店里，点一下自己可以换发型和衣服</li>
       </ul>
       <p>先选个座位，再点菜结账，吃到的鱼就会出现在图鉴里。</p>
       <div class="btn-row">
@@ -420,7 +461,7 @@
     cls: "book",
     render: (then) => `
       <h2>お席</h2>
-      <p class="sub">选一个座位吧</p>
+      <p class="sub">选一个座位吧 · <button class="link" data-open="guest">换个样子</button></p>
       <div class="seat-grid">
         ${D.seats.map((s) => `
           <button class="seat-card ${state.seat === s.id ? "active" : ""}" data-seat="${s.id}">
@@ -437,6 +478,46 @@
         toast(`已入座：${s.name}`);
         if (then) open(then); else close();
       }));
+    },
+  };
+
+  // 客人形象
+  const GUEST_LABELS = { hairStyle: "发型", hairColor: "发色", outfit: "衣服", accessory: "配饰" };
+  views.guest = {
+    cls: "book",
+    render: () => `
+      <h2>お客さん</h2>
+      <p class="sub">打扮一下再入座吧。你的样子会显示在座位上。</p>
+      <div class="guest-wrap">
+        <svg class="guest-preview" viewBox="-60 -165 120 175" aria-hidden="true">
+          <rect x="-60" y="-165" width="120" height="175" fill="#e9dcc0"/>
+          <ellipse cx="0" cy="4" rx="36" ry="9" fill="#9e2b25"/>
+          ${guestSVG(state.guest)}
+        </svg>
+        <div class="guest-opts">
+          ${Object.entries(D.guest).map(([k, opts]) => `
+            <div class="opt-row">
+              <span>${GUEST_LABELS[k] || k}</span>
+              <div>${opts.map((o) => `
+                <button class="opt ${state.guest[k] === o.id ? "active" : ""}" data-k="${k}" data-v="${o.id}">
+                  ${o.color ? `<i style="background:${o.color}"></i>` : ""}${o.name}
+                </button>`).join("")}</div>
+            </div>`).join("")}
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" data-open="seats">${state.seat ? "换座位" : "去选座位"}</button>
+        <button class="btn" id="guest-random">随机一下</button>
+      </div>`,
+    mount: () => {
+      const save = () => { store.set("guest", state.guest); updateHud(); rerender(); };
+      $$(".opt", body).forEach((b) => b.addEventListener("click", () => {
+        state.guest[b.dataset.k] = b.dataset.v; save();
+      }));
+      $("#guest-random", body).addEventListener("click", () => {
+        Object.entries(D.guest).forEach(([k, opts]) => { state.guest[k] = pick(opts).id; });
+        save();
+      });
     },
   };
 

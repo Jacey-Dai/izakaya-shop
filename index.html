@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>小春鮨 · Koharu Sushi</title>
+  <title>小舟 · Kobune Sushi</title>
   <meta name="description" content="一家可以探索的日式小店：看菜单、和师傅聊天、自选鱼生、收集刺身图鉴。">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,10 +13,10 @@
 <body>
   <header class="hud">
     <div class="brand">
-      <span class="brand-mark">鮨</span>
+      <span class="brand-mark">舟</span>
       <div>
-        <h1>小春鮨</h1>
-        <p>こはるずし · Koharu Sushi</p>
+        <h1>小舟</h1>
+        <p>こぶね · 鮨 · Kobune Sushi</p>
       </div>
     </div>
     <nav class="hud-actions">
@@ -29,7 +29,7 @@
   <main class="stage">
     <p class="hint">将鼠标移到店内各处探索，点击即可互动</p>
 
-    <svg class="scene" viewBox="0 0 1200 700" role="img" aria-label="小春鮨店内">
+    <svg class="scene" viewBox="0 0 1200 700" role="img" aria-label="小舟店内">
       <defs>
         <linearGradient id="g-wall" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#efe3c8"/>
@@ -95,7 +95,7 @@
           <path d="M96 60 h58 v150 q-29 8 -58 0z" fill="#2c3e60"/>
           <path d="M158 60 h58 v150 q-29 8 -58 0z" fill="#2c3e60"/>
           <text x="63" y="150" class="noren-text">小</text>
-          <text x="125" y="150" class="noren-text">春</text>
+          <text x="125" y="150" class="noren-text">舟</text>
           <text x="187" y="150" class="noren-text">鮨</text>
         </g>
       </g>
@@ -254,11 +254,8 @@
         <text x="1074" y="552" class="mini-text">品書</text>
       </g>
 
-      <!-- “你在这里”标记 -->
-      <g id="you-marker" class="you-marker" style="display:none">
-        <path d="M0 -40 a14 14 0 1 1 0.1 0 M-10 -30 L0 -8 L10 -30" fill="#c0392b"/>
-        <circle cx="0" cy="-40" r="5" fill="#fff"/>
-      </g>
+      <!-- 客人（选座后出现，由 app.js 绘制） -->
+      <g id="guest" class="hotspot" data-id="guest" style="display:none"></g>
     </svg>
 
     <div id="tooltip" class="tooltip" hidden></div>

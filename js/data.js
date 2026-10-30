@@ -1,5 +1,5 @@
 /*
- * 小春鮨 · 店铺数据
+ * 小舟 · 店铺数据
  * 想加鱼、加菜、改台词，只需要改这个文件。
  *
  * 鱼 (fish) 字段说明：
@@ -21,9 +21,9 @@
  */
 window.SHOP_DATA = {
   shop: {
-    name: "小春鮨",
-    jp: "こはるずし",
-    en: "Koharu Sushi",
+    name: "小舟",
+    jp: "こぶね",
+    en: "Kobune Sushi",
     chef: "春田师傅",
     chefJp: "春田さん",
   },
@@ -109,9 +109,37 @@ window.SHOP_DATA = {
   ],
 
   seats: [
-    { id: "counter", name: "吧台席", jp: "カウンター席", desc: "坐在师傅正前方，看着他切鱼。师傅会多和你聊几句。", marker: [630, 520] },
-    { id: "tatami", name: "和室座敷", jp: "座敷", desc: "脱鞋坐在榻榻米上，矮桌和坐垫，适合慢慢吃。", marker: [1075, 600] },
+    { id: "counter", name: "吧台席", jp: "カウンター席", desc: "坐在师傅正前方，看着他切鱼。师傅会多和你聊几句。", marker: [630, 546] },
+    { id: "tatami", name: "和室座敷", jp: "座敷", desc: "脱鞋坐在榻榻米上，矮桌和坐垫，适合慢慢吃。", marker: [1000, 636] },
   ],
+
+  // 客人形象：选座后坐在座位上（背影，面向师傅）。每组第一项是默认值。
+  guest: {
+    hairStyle: [
+      { id: "short", name: "短发" },
+      { id: "bun", name: "丸子头" },
+      { id: "ponytail", name: "马尾" },
+      { id: "long", name: "长发" },
+    ],
+    hairColor: [
+      { id: "black", name: "乌黑", color: "#2b2622" },
+      { id: "brown", name: "栗色", color: "#6b3f22" },
+      { id: "gold", name: "亚麻金", color: "#c9a25a" },
+      { id: "silver", name: "银灰", color: "#a9a9b0" },
+    ],
+    outfit: [
+      { id: "ai", name: "靛蓝", color: "#2c3e60" },
+      { id: "shu", name: "朱红", color: "#b23a2e" },
+      { id: "matcha", name: "抹茶", color: "#6a8a3a" },
+      { id: "sakura", name: "樱粉", color: "#e8a3b0" },
+      { id: "kuro", name: "墨黑", color: "#33302d" },
+    ],
+    accessory: [
+      { id: "none", name: "无" },
+      { id: "kanzashi", name: "发簪" },
+      { id: "hat", name: "帽子" },
+    ],
+  },
 
   // 鼠标悬停时显示的提示
   hotspots: {
@@ -120,6 +148,7 @@ window.SHOP_DATA = {
     tags: { title: "墙上木札 · お品書き", hint: "一品料理与甜品" },
     drinks: { title: "酒架 · お飲み物", hint: "清酒、梅酒和茶" },
     chef: { title: "春田师傅 · 板前", hint: "和师傅聊聊，或请他推荐" },
+    guest: { title: "你 · お客さん", hint: "换个发型或衣服" },
     fishcase: { title: "鱼柜 · ネタケース", hint: "自选鱼生，亲手拼一盘" },
     seats: { title: "座位 · お席", hint: "选择你的座位" },
     tablemenu: { title: "桌面菜单 · メニュー", hint: "翻开完整菜单点菜" },
