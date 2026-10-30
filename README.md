@@ -45,5 +45,6 @@ index.html      页面和店内场景（SVG）
 css/style.css   样式
 js/data.js      鱼、菜单、座位、台词等所有内容数据
 js/app.js       交互逻辑
-docs/PRD.md     产品需求和后续想法
+docs/PRD.md     完整产品需求文档（多 agent 协作请先读）
+CLAUDE.md       给 agent 的入口说明（AGENTS.md 内容相同）
 ```
