@@ -9,7 +9,7 @@
 | 产品负责人 | Jacey（所有产品决策由 Jacey 拍板） |
 | 仓库 | https://github.com/Jacey-Dai/izakaya-shop |
 | 线上地址 | https://jacey-dai.github.io/izakaya-shop/ （需在仓库 Settings → Pages 开启） |
-| 当前版本 | v0.1.1（第一版可玩原型 + 客人形象） |
+| 当前版本 | v0.1.2（可玩原型 + 客人形象 + 中英双语） |
 | 文档更新 | 2026-10-30 |
 
 ---
@@ -48,7 +48,7 @@
 | --- | --- |
 | 日式风 | 配色限定在和纸米色、墨色、朱红、靛蓝、木色（见 `css/style.css` 的 `:root`）。标题用毛笔字体，菜单尽量竖排。 |
 | 每个热点都有回应 | 悬停：高亮 + 提示气泡；点击：打开对应弹窗。不能有“点了没反应”的东西。 |
-| 中文为主，日语点缀 | 界面文案用简体中文；菜名、标题配日语。图鉴同时给出中文、日语、英语。 |
+| 中英双语，日语点缀 | 界面有简体中文和英文两个版本，访客在顶栏随时切换（F-14）。菜名、标题保留日语。图鉴同时给出中文、日语、英语。 |
 | 不打断 | 不用浏览器 `alert/confirm`；提示用页面底部的 toast。 |
 | 零门槛 | 纯静态页面，双击 `index.html` 即可运行，不需要安装和构建。 |
 | 可访问 | 热点可用键盘 Tab 聚焦、Enter 打开；Esc 关闭弹窗；尊重“减少动态效果”设置。 |
@@ -72,6 +72,7 @@
 | F-11 | 鱼图鉴：进度、稀有度筛选、详情页 | 挂轴 `zukan` | `zukan`、`fish` |
 | F-12 | 招财猫抽签，影响おまかせ稀有度 | `neko` | `neko` |
 | F-13 | 客人形象：选座后坐在座位上，可换发型、发色、衣服、配饰 | 场景里的自己 `guest`；选座弹窗「换个样子」 | `guest` |
+| F-14 | 中英双语切换 | 顶栏「EN / 中文」按钮 | 全部 |
 
 ---
 
@@ -135,6 +136,15 @@
 - 画法在 `app.js` 的 `guestSVG(guest)`，原点是座位面中心、向上绘制；场景和预览共用。
 - **AC**：改任意选项，预览和场景里的形象同时更新；刷新后保持；换座位时形象跟着移动。
 
+### F-14 中英双语 · Language
+- 两种语言：简体中文 `zh`、英文 `en`。顶栏按钮显示“要切换到的语言”（中文界面显示 `EN`，英文界面显示 `中文`）。
+- 首次访问按浏览器语言决定（`zh*` → 中文，其他 → 英文）；之后记住选择（`kobune.lang`）。
+- 切换后立即生效：顶栏、提示、热点提示和无障碍标签、当前打开的弹窗都会重绘；已经在订单里的菜名也跟着变。
+- 日语元素（暖帘、立牌竖排字、弹窗日文标题、假名）在两种语言下都保留，它们是氛围的一部分。
+- 图鉴详情：中文界面主标题是中文名、副标题有英文名；英文界面反过来。
+- 顶栏在弹窗打开时仍可点击（弹窗会让出顶栏的高度）。
+- **AC**：任意界面切换语言，看不到残留的另一种语言文案（日语除外）；刷新后保持所选语言；缺翻译时显示中文，不报错。
+
 ### F-12 招财猫 · おみくじ
 - 随机抽一支签（大吉～末吉），本次访问内运气取最高值，影响 F-07 权重。
 - **AC**：运气不保存，刷新后归零。
@@ -174,8 +184,14 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 - `chef`：`greetings[]`、`counterExtra[]`、`omakaseIntro`、`legendary`、`afterOrder[]`
 - `omikuji`：`{ result, text, luck: 0–3 }[]`
 
+### 5.3.1 翻译数据
+- **界面文案**：`js/i18n.js` 的 `window.I18N = { zh: {...}, en: {...} }`，扁平 key（如 `"cart.submit"`），支持 `{name}` 占位符。两种语言的 key 必须一一对应。
+- **内容英文**：`js/data.en.js` 的 `window.SHOP_DATA_EN`，按 `id` 对应 `data.js`：`fish[id]`（season / texture / flavor / desc）、`menu[id]`（name / desc）、`categories`、`seats`、`guest`（按选项 id）、`hotspots`、`rarity`、`chef`（数组与中文**按位置对应**）、`omikuji`（按位置对应）。
+- 鱼的英文名用 `data.js` 里已有的 `en` 字段，不重复写。
+- 缺英文时回退中文。**新增任何中文内容或文案，必须同时补英文**（见 §7.2）。
+
 ### 5.4 运行时状态与本地存档
-`app.js` 里的 `state`：`cart`、`plate`、`seat`、`collected`、`fresh`、`luck`、`omakase`、`menuTab`、`zukanFilter`。
+`app.js` 里的 `state`：`lang`、`cart`、`plate`、`seat`、`collected`、`fresh`、`guest`、`luck`、`omakase`、`menuTab`、`zukanFilter`。
 
 本地存档（localStorage，前缀 `kobune.`，读写失败时静默。店名改名前用的是 `koharu.`，读取时会回退兼容旧存档）：
 | key | 内容 |
@@ -184,8 +200,27 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 | `kobune.zukan` | 已收录鱼 id 数组 |
 | `kobune.fresh` | 尚未在图鉴里看过的新收录鱼 id |
 | `kobune.guest` | 客人形象 `{ hairStyle, hairColor, outfit, accessory }` |
+| `kobune.lang` | 界面语言 `zh` / `en` |
 
 > 新增存档 key 必须写进这张表；**改变已有 key 的格式需要写迁移代码**。
+
+### 5.5 存档的局限与方案
+网站不需要登录，进度存在**访客自己的浏览器里**（localStorage）。
+
+| 情况 | 进度还在吗 |
+| --- | --- |
+| 普通刷新、关掉标签页再打开、重启电脑 | ✅ 在 |
+| 同一台电脑换一个浏览器（例如 Chrome → Safari） | ❌ 看不到 |
+| 换设备（电脑 → 手机） | ❌ 看不到 |
+| 清除浏览器数据 / 缓存与网站数据 | ❌ 丢失 |
+| 无痕 / 隐私模式 | ❌ 关掉窗口就丢失 |
+| 浏览器禁用了本地存储 | ❌ 无法保存（页面照常能玩） |
+
+方案（按优先级）：
+1. **导出 / 导入存档码（T-07，v0.2）**：在图鉴里提供“导出存档”，把全部 `kobune.*` 存档打包成一段文字码（JSON → Base64，带版本号和校验）；可以复制、下载成文件或生成二维码。在另一台设备“导入存档”粘贴即可恢复。仍然不需要登录、不需要服务器。
+2. **提醒**：图鉴收集到一定数量（例如 5 种）时，用 toast 提醒一次“记得导出存档”。
+3. **云同步（T-31，可选，后期）**：如果以后需要跨设备自动同步，需要引入账号和后端（例如 Supabase / Firebase，或用“同步码”匿名绑定）。这会打破“纯静态、无服务器”的约束，需要 Jacey 决定（§10 Q7）。
+
 
 ---
 
@@ -194,12 +229,15 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 ### 6.1 约束
 - 纯 HTML / CSS / 原生 JS，不引入框架和构建工具；外部资源只用 Google Fonts。
 - 要能直接用 `file://` 打开（所以不用 ES module 的 `import`，用普通 `<script>` 按顺序加载）。
+- 脚本加载顺序：`i18n.js` → `data.js` → `data.en.js` → `app.js`。
 
 ### 6.2 文件
 ```
 index.html        页面骨架 + 店内 SVG 场景
 css/style.css     全部样式（按区块分节：顶栏 / 场景 / 弹窗 / 各视图 / 响应式）
-js/data.js        内容数据 SHOP_DATA
+js/i18n.js        界面文案（中 / 英）I18N
+js/data.js        内容数据 SHOP_DATA（中文为源）
+js/data.en.js     内容数据的英文翻译 SHOP_DATA_EN
 js/app.js         交互逻辑
 docs/PRD.md       本文档
 CLAUDE.md         给 agent 的入口说明（指向本文；AGENTS.md 内容相同，供其他 agent 工具读取）
@@ -218,11 +256,12 @@ views.<id> = {
 - 弹窗内的通用按钮无需绑定：`data-add="<menuItemId>"` 加入订单，`data-open="<viewId>"` 切换视图。
 - 场景热点的 `data-id` 与视图 id 同名，点击自动打开。
 
-**新增一个可互动物体的步骤**：① `index.html` 场景里画 `<g class="hotspot" data-id="xxx">` ② `data.js` 的 `hotspots.xxx` 写提示 ③ `app.js` 加 `views.xxx` ④ 需要的样式加到 `style.css` 对应分节。
+**新增一个可互动物体的步骤**：① `index.html` 场景里画 `<g class="hotspot" data-id="xxx">` ② `data.js` 的 `hotspots.xxx` 写提示，`data.en.js` 的 `hotspots.xxx` 写英文 ③ `app.js` 加 `views.xxx`，所有文案用 `t("key")`，key 同时加进 `i18n.js` 的 zh 和 en ④ 需要的样式加到 `style.css` 对应分节。
 
 ### 6.4 公共函数（app.js 内）
-`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`sliceHTML(fish)`、`swatchHTML(fish, n)`、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`store.get/set`。
-CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
+`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`sliceHTML(fish)`、`swatchHTML(fish, n)`、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`store.get/set`。
+语言相关：`t(key, vars)` 取界面文案；`fishName(f)`、`fishText(f, field)`、`itemName(it)`、`itemDesc(it)`、`seatName(s)`、`rarityName(r)`、`chefLine(key, i?)` 取当前语言的内容；`applyLang()` 刷新整页。
+CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: string[], counts? }`。名称和备注不存死，显示时由 `lineName(l)` / `lineNote(l)` 按当前语言生成。
 
 ---
 
@@ -239,6 +278,7 @@ CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
 | 文件 | 规则 |
 | --- | --- |
 | `js/data.js` | 只在自己负责的数组/对象**末尾追加**；不重排、不删已有条目；不改已有 `id`。 |
+| `js/data.en.js` / `js/i18n.js` | 加中文内容或文案的同一个 PR 里必须补英文；只追加自己的 key。英文由 agent 起草即可，Jacey 可后续润色。 |
 | `js/app.js` | 每个视图是独立代码块，只改自己任务涉及的 `views.<id>` 和必要的公共函数。改公共函数要在 PR 里点名。在 T-01 完成后，视图拆到 `js/views/*.js`，冲突会少很多。 |
 | `index.html` | 场景 SVG 按物体分组并有中文注释；新物体加在“你在这里”标记之前。 |
 | `css/style.css` | 在对应分节内追加；新视图新建分节注释 `/* 视图名 */`。不改 `:root` 颜色变量，除非任务就是改配色。 |
@@ -246,7 +286,7 @@ CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
 
 ### 7.3 代码风格
 - 2 空格缩进、双引号、`const` 优先；跟周围代码保持一致的注释密度（中文注释）。
-- 界面文案用简体中文；不要出现 `alert`/`confirm`/`prompt`。
+- 界面文案不要写死在 `app.js` 里，一律走 `t()`；不要出现 `alert`/`confirm`/`prompt`。
 - 动画都要被 `prefers-reduced-motion` 覆盖（全局规则已处理，别用 JS 强制动画）。
 - 不引入新依赖；如确有需要，先写进 §10。
 
@@ -256,6 +296,7 @@ CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
 - [ ] 走一遍主流程：选座 → 菜单点菜 → 鱼柜拼盘 → おまかせ → 下单 → 图鉴出现新鱼 → 刷新后进度仍在
 - [ ] 390px 宽的手机视口下弹窗不溢出
 - [ ] 改了数据时：新鱼所有字段齐全，`id` 唯一
+- [ ] 中英各走一遍：切换语言后当前弹窗和顶栏都变，没有残留另一种语言的文案
 
 建议用 Playwright 跑一遍上面的流程并截图附到 PR（本仓库暂无自动化测试，见 T-02）。
 
@@ -266,9 +307,11 @@ CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
 | 阶段 | 主题 | 内容 |
 | --- | --- | --- |
 | v0.1 ✅ | 可玩原型 | §3 全部功能 |
-| v0.2 | 打好协作基础 + 打磨 | T-01 ~ T-06 |
+| v0.2 | 打好协作基础 + 打磨 + 存档安全 | T-01 ~ T-07 |
 | v0.3 | 摆盘与角色玩法 | T-10 ~ T-13（需 Jacey 先回答 §10 的 Q1–Q3） |
-| v0.4 | 内容与长线收集 | T-20 ~ T-24 |
+| v0.4 | 时间、季节与氛围 | T-20 ~ T-22、T-26 |
+| v0.5 | 收集与故事 | T-23 ~ T-25、T-27 ~ T-30 |
+| 后期（可选） | 云同步 | T-31（需 §10 Q7） |
 
 ---
 
@@ -285,6 +328,8 @@ CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
 | T-04 | 开启 GitHub Pages 并在 README 放线上链接 | 待决策 | — | 仓库设置 | 需要 Jacey 在 Settings → Pages 操作 |
 | T-05 | 上菜动画：下单后师傅把盘子推到你的座位，再弹小票 | 待做 | T-01 | `views/receipt`、`index.html` | 动画 ≤ 2 秒，可被减少动态效果关闭 |
 | T-06 | 图鉴详情增加“吃过几次 / 第一次吃的日期” | 待做 | — | `app.js`、存档表 | 新增存档 key 写进 §5.4 |
+| T-07 | 导出 / 导入存档码（见 §5.5）：复制文字码、下载文件；导入前预览“将恢复 N 种鱼”，可选合并或覆盖；集到 5 种鱼时提醒一次 | 待做 | — | `app.js`、`i18n.js`、新视图 `save` | 在另一浏览器导入后图鉴、座位、形象完全一致；坏码给出友好提示不崩溃 |
+| T-08 | 中英双语（F-14） | 完成 | — | `i18n.js`、`data.en.js`、`app.js` | 见 F-14 AC |
 
 ### v0.3 摆盘与角色玩法（Jacey 提出，**暂不执行**，等 §10 决策）
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
@@ -294,20 +339,30 @@ CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
 | T-12 | 当 chef · 重新摆盘 / 上菜：清空、打乱重摆；完成后“上菜”给客人，客人有反馈 | 待决策 | T-11、Q2 | `plating`、`receipt` | 上菜后进入下单流程，图鉴照常收录 |
 | T-13 | 当客人 · 被上菜：师傅摆盘并端上来（复用 T-05 动画） | 待决策 | T-05、T-10 | `fishcase`、`receipt` | 与当前流程一致，多一段上菜表现 |
 
+### 后期（可选）
+| 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
+| --- | --- | --- | --- | --- | --- |
+| T-31 | 云同步存档：账号或匿名同步码，跨设备自动同步 | 待决策 | T-07、Q7 | 需要后端 | 离线时照常使用本地存档 |
+
 ### v0.4 内容与长线收集
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
-| T-20 | 季节限定鱼：按真实月份出现在鱼柜 / 立牌 | 待做 | — | `data.js`（新增 `months` 字段） | 字段写进 §5.1；非当季不出现 |
-| T-21 | 成就与集齐奖励（如集齐所有「特上」） | 待做 | T-06 | 新视图 `achievements` | 成就存档写进 §5.4 |
-| T-22 | 音效与背景音乐（门铃、切鱼、いらっしゃいませ），默认静音、可开关 | 待做 | — | `assets/`、`app.js` | 首次互动前不播放声音 |
+| T-20 | 季节旬鱼：鱼加 `months` 字段，按真实月份决定哪些鱼当季；当季鱼在立牌和鱼柜里标「旬」，非当季的季节限定鱼不出现；图鉴加「季节限定」标签和筛选 | 待做 | — | `data.js`（`months`、`seasonal`）、`views/board`、`fishcase`、`zukan` | 字段写进 §5.1；可用 URL 参数 `?month=7` 预览其他月份 |
+| T-21 | 昼夜：按本地时间切换白天 / 夜晚（夜里灯笼点亮、窗外变暗、色调变暖），顶栏可手动切换 | 待做 | — | `index.html`、`css`（`[data-time="night"]`）、`app.js` | 18:00–6:00 自动夜晚；切换有 0.5 秒过渡；减少动态效果时无过渡 |
+| T-22 | 氛围音：木门铃（打开暖帘）、刀切鱼（放鱼进盘）、倒茶（点茶）、小铃（下单）；背景乐为三味线或尺八轻音乐。默认静音，顶栏音量按钮开关，记住选择 | 待做 | — | `assets/audio/`、`app.js`、存档表 | 首次互动前不播放；文件总大小 ≤ 3 MB；素材授权写进 §11 |
+| T-26 | 套餐：味噌汤 + 茶 + 甜品可以搭配成「定食 / セット」（例如刺身定食、寿司定食），比单点便宜；结账时打出手写风格小票（毛笔字、竖排店名、印章、日期、座位） | 待做 | — | `data.js`（`sets`）、`views/cart`、`receipt`、`css` | 套餐价格规则写进 §5.2；小票可截图保存 |
 | T-23 | 扩充鱼种到 40+（只追加到数组末尾） | 待做 | — | `data.js` | 每条字段齐全，口感描述不重复 |
 | T-24 | 更多座位与店内其他客人（NPC，可复用 `guestSVG`） | 待做 | T-01 | `index.html`、`data.js` | — |
 | T-25 | 客人形象扩展：正面头像（用于小票、对话），更多发型 / 服装款式 | 待做 | — | `app.js`、`data.js` | 新款式写进 §5.3 |
+| T-27 | 师傅小剧场 · 冷知识：每种鱼加 `trivia`（中英各一句），上菜 / 小票时春田讲一句这条鱼的冷知识 | 待做 | — | `data.js`、`data.en.js`、`views/receipt` | 22 种鱼全部有冷知识；同一次不重复 |
+| T-28 | 师傅小剧场 · 常客故事：按来店次数（下单次数）解锁春田的故事章节，例如第 3、7、15、30 次；故事在师傅弹窗里的「聊聊往事」查看 | 待做 | T-06 | `data.js`（`stories`）、`views/chef`、存档表 | 来店次数写进 §5.4；未解锁显示“再来几次吧” |
+| T-29 | 图鉴套组印章：定义套组（如「赤身三兄弟」= 赤身 + 中腹 + 大腹、「北海道之味」= 扇贝 + 海胆 + 牡丹虾），集齐得一枚印章，图鉴里有印章册 | 待做 | — | `data.js`（`collections`）、`views/zukan`、存档表 | 至少 6 个套组；集齐时有盖章动画 |
+| T-30 | 御朱印收集卡：把已获得的印章排在一张和纸卡上，可下载成图片分享（含店名、日期、收集数） | 待做 | T-29 | 新视图 `goshuin` | 用 Canvas 生成 PNG；中英两种版式 |
 
 ### 想法池（未评估）
 - 图鉴卡片可以分享成图片
 - 夜晚 / 白天两种店内光线
-- 多语言切换（中 / 日 / 英）
+- 日语界面（第三种语言）
 
 ---
 
@@ -322,12 +377,40 @@ CartLine 结构：`{ key, name, price, qty, fish: string[], note? }`。
 | Q3 | 摆好的盘要不要能保存或分享？ | T-11 | 待定 |
 | Q4 | 价格用日元 ¥ 还是人民币？目前是日元。 | 全局 | 待定 |
 | Q5 | 店名和师傅名字？ | 全局 | **已定**：店名「小舟」（こぶね · Kobune Sushi），师傅「春田师傅」 |
+| Q6 | 界面语言？ | F-14 | **已定**：中文、英文两个版本，访客自行切换 |
+| Q7 | 是否需要跨设备云同步？需要的话可以接受引入账号 / 后端吗？ | T-31 | 待定（先做 T-07 存档码） |
+| Q8 | 背景音乐用三味线还是尺八？默认静音还是默认小音量？ | T-22 | 待定（PRD 暂定默认静音） |
+| Q9 | 套餐有哪几种、价格怎么定？ | T-26 | 待定 |
 
 ---
 
-## 11. 变更记录
+## 11. 素材来源
+
+用任何外部素材前，先确认授权允许商用和改编，并在下表登记（文件路径 · 来源 · 作者 · 授权）。**能用 SVG / CSS 自己画的优先自己画**，保持画风统一。
+
+| 类型 | 来源 | 授权要点 |
+| --- | --- | --- |
+| 插画 / 图标 | [いらすとや](https://www.irasutoya.com/) | 免费商用，但**一个作品最多 20 张**；不能二次分发素材本身 |
+| 插画 / 图标 / 游戏素材 | [Kenney](https://kenney.nl/) | CC0，可随意使用 |
+| 游戏素材 | [OpenGameArt](https://opengameart.org/) | 每个作品授权不同（CC0 / CC-BY / GPL…），逐个确认，CC-BY 需署名 |
+| 和风花纹（青海波、麻の葉等） | [Hero Patterns](https://heropatterns.com/)，或自己用 SVG 画 | Hero Patterns 为 CC BY 4.0，需署名 |
+| 音效 | [効果音ラボ](https://soundeffect-lab.info/) | 免费商用，无需署名；不能二次分发素材本身 |
+| BGM / 音效 | [魔王魂](https://maou.audio/) | 免费商用；按其规约注明出处 |
+| 音效 | [Freesound](https://freesound.org/) | 每个文件授权不同，优先选 CC0；CC-BY 需署名 |
+| 字体 | Google Fonts：Noto Serif SC、Yuji Syuku、Klee One（在用）；Zen Old Mincho、Kaisei Decol（备选） | SIL Open Font License，可商用 |
+| 鱼类资料 | [Wikipedia](https://ja.wikipedia.org/)、[ぼうずコンニャク市場魚貝類図鑑](https://www.zukan-bouz.com/) | 只作参考，**文字必须自己改写**；图片不能直接使用 |
+
+### 已使用的外部素材
+| 文件 | 来源 | 作者 | 授权 |
+| --- | --- | --- | --- |
+| （暂无，目前所有图形都是 SVG / CSS 自绘） | | | |
+
+---
+
+## 12. 变更记录
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
 | 2026-10-30 | v0.1 | 第一版可玩原型；PRD 初版 |
 | 2026-10-30 | — | PRD 扩充为完整版：功能规格与验收标准、数据模型、架构约定、多 agent 协作规范、任务清单 |
 | 2026-10-30 | v0.1.1 | 店名改为「小舟」，存档前缀改为 `kobune.`（兼容旧存档）；新增 F-13 客人形象 |
+| 2026-10-30 | v0.1.2 | 新增 F-14 中英双语；PRD 加入存档局限与方案（§5.5）、昼夜 / 季节旬鱼、氛围音、师傅小剧场、套组印章与御朱印卡、套餐与手写小票、素材来源（§11） |
