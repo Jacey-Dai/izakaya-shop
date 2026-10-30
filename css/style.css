@@ -110,8 +110,6 @@ button { font: inherit; cursor: pointer; }
 .neko-paw { transform-origin: 900px 346px; animation: beckon 1.6s ease-in-out infinite; }
 @keyframes beckon { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-25deg); } }
 
-.you-marker { animation: hop 1.2s ease-in-out infinite; pointer-events: none; }
-@keyframes hop { 50% { translate: 0 -6px; } }
 
 .tooltip {
   position: fixed; z-index: 30; pointer-events: none;
@@ -348,6 +346,21 @@ button { font: inherit; cursor: pointer; }
 .seat-card small { margin-left: 6px; color: var(--sumi-soft); }
 .seat-card p { margin: 8px 0 0; font-size: 14px; color: var(--sumi-soft); line-height: 1.6; }
 
+/* 客人形象 */
+.guest-wrap { display: grid; grid-template-columns: 180px 1fr; gap: 24px; align-items: start; }
+.guest-preview { width: 180px; height: 262px; border-radius: 10px; }
+.opt-row { display: grid; grid-template-columns: 48px 1fr; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px dotted #c8b894; }
+.opt-row > span { color: var(--sumi-soft); font-size: 13px; }
+.opt {
+  border: 1px solid #c8b894; background: #fff; color: inherit; border-radius: 999px;
+  padding: 4px 12px; margin: 3px 4px 3px 0; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+}
+.opt i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .2); }
+.opt.active { border-color: var(--shu); box-shadow: 0 0 0 2px rgba(192, 57, 43, .2); }
+.link { border: none; background: none; color: var(--shu); padding: 0; text-decoration: underline; font-size: inherit; }
+#guest { animation: hop-in .4s ease-out; }
+@keyframes hop-in { from { opacity: 0; } }
+
 /* 订单 */
 .cart-list { list-style: none; padding: 0; margin: 0; }
 .cart-line { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dotted #c8b894; }
@@ -419,7 +432,8 @@ button { font: inherit; cursor: pointer; }
 
 @media (max-width: 720px) {
   .modal { padding: 20px 16px; }
-  .builder, .chef-wrap, .detail { grid-template-columns: 1fr; }
+  .builder, .chef-wrap, .detail, .guest-wrap { grid-template-columns: 1fr; }
+  .guest-preview { margin: 0 auto; }
   .chef-portrait { margin: 0 auto; }
   .plate { width: 260px; height: 260px; }
   .portion-inner { top: -100px; }
