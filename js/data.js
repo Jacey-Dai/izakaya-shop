@@ -127,6 +127,11 @@ window.SHOP_DATA = {
       { id: "gold", name: "亚麻金", color: "#c9a25a" },
       { id: "silver", name: "银灰", color: "#a9a9b0" },
     ],
+    clothing: [
+      { id: "casual", name: "便服" },
+      { id: "kimono", name: "和服" },
+      { id: "yukata", name: "浴衣" },
+    ],
     outfit: [
       { id: "ai", name: "靛蓝", color: "#2c3e60" },
       { id: "shu", name: "朱红", color: "#b23a2e" },
@@ -155,6 +160,13 @@ window.SHOP_DATA = {
     zukan: { title: "挂轴 · 鱼图鉴", hint: "查看你收集到的鱼生" },
     neko: { title: "招财猫 · 招き猫", hint: "摸一摸，抽一支签" },
   },
+
+  // 厨师形象。春田师傅默认男性；以后玩家“当厨师”（PRD T-10）时可以选男 / 女。
+  // 调试预览：在网址后加 ?chef=female
+  chefLooks: [
+    { id: "male", name: "男" },
+    { id: "female", name: "女" },
+  ],
 
   chef: {
     greetings: [

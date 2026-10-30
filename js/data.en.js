@@ -71,9 +71,12 @@ window.SHOP_DATA_EN = {
   guest: {
     short: "Short", bun: "Bun", ponytail: "Ponytail", long: "Long",
     black: "Black", brown: "Chestnut", gold: "Flaxen", silver: "Silver",
+    casual: "Casual", kimono: "Kimono", yukata: "Yukata",
     ai: "Indigo", shu: "Vermilion", matcha: "Matcha", sakura: "Sakura", kuro: "Ink black",
     none: "None", kanzashi: "Hairpin", hat: "Hat",
   },
+
+  chefLooks: { male: "Male", female: "Female" },
 
   hotspots: {
     noren: { title: "Noren curtain", hint: "About the shop and how to play" },

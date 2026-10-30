@@ -3,6 +3,7 @@
 
   const D = window.SHOP_DATA;
   const EN = window.SHOP_DATA_EN || {};
+  const ART = window.KOBUNE_ART;
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const yen = (n) => (n === 0 ? t("free") : "¥" + n.toLocaleString("ja-JP"));
@@ -81,6 +82,9 @@
     collected: new Set(store.get("zukan", [])),
     fresh: new Set(store.get("fresh", [])),
     guest: { ...defaultGuest(), ...store.get("guest", {}) },
+    // 春田师傅默认男性；女性形象留给玩家“当厨师”时选择（T-10），可用 ?chef=female 预览
+    chefLook: new URLSearchParams(location.search).get("chef") === "female" ? "female" : D.chefLooks[0].id,
+    orderMode: "dine",
     luck: 0,
     omakase: null,
     menuTab: "sashimi",
@@ -99,40 +103,134 @@
   })();
 
   // ---------- 小组件 ----------
-  const sliceHTML = (f) => `<i class="slice ${f.shape === "slice" ? "" : f.shape}" style="--c:${f.color};--c2:${f.color2}"></i>`;
-  const swatchHTML = (f, n = 1) => `<div class="swatch">${sliceHTML(f).repeat(n)}</div>`;
+  // 插画在 art.js：刺身片、握寿司 / 军舰、细卷、木屐盘、外带盒
+  const swatchHTML = (f, n = 1) => `<div class="swatch">${ART.sashimi(f, n)}</div>`;
+  const sushiHTML = (f) => `<div class="swatch">${ART.nigiri(f)}</div>`;
+  function itemArt(it) {
+    if (!it.fish) return "";
+    const f = fishById[it.fish[0]];
+    if (it.id.startsWith("s-")) return ART.sashimi(f, 2);
+    if (it.id.startsWith("r-")) return ART.maki(f);
+    return ART.nigiri(f);
+  }
   const rarityColor = (r) => D.rarity[r].color;
 
-  // 客人背影，原点在座位面中心，向上画
+  // 客人背影，原点在座位面中心，向上画。画风与师傅一致（柔和描边）
   function guestSVG(g) {
     const opt = (k) => D.guest[k].find((o) => o.id === g[k]) || D.guest[k][0];
+    const line = `stroke="${ART.OUTLINE}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"`;
     const hair = opt("hairColor").color;
     const cloth = opt("outfit").color;
     const style = g.hairStyle;
     const acc = g.accessory;
+    const wear = opt("clothing").id;
     const back = {
       short: "",
-      bun: `<circle cx="0" cy="-138" r="11" fill="${hair}"/>`,
-      ponytail: `<ellipse cx="0" cy="-80" rx="8" ry="20" fill="${hair}"/><rect x="-5" y="-98" width="10" height="5" rx="2" fill="#c0392b"/>`,
-      long: `<path d="M-23 -112 Q-26 -70 -20 -56 L20 -56 Q26 -70 23 -112 Z" fill="${hair}"/>`,
+      bun: `<circle cx="0" cy="-138" r="11" fill="${hair}" ${line}/>`,
+      ponytail: `<ellipse cx="0" cy="-80" rx="8" ry="20" fill="${hair}" ${line}/><rect x="-5" y="-98" width="10" height="5" rx="2" fill="#c0392b"/>`,
+      long: `<path d="M-23 -112 Q-26 -70 -20 -56 L20 -56 Q26 -70 23 -112 Z" fill="${hair}" ${line}/>`,
     }[style] || "";
     const extra = {
       none: "",
       kanzashi: `<line x1="6" y1="${style === "bun" ? -140 : -126}" x2="24" y2="${style === "bun" ? -150 : -138}" stroke="#d9a520" stroke-width="3" stroke-linecap="round"/><circle cx="25" cy="${style === "bun" ? -151 : -139}" r="4" fill="#c0392b"/>`,
-      hat: `<ellipse cx="0" cy="-122" rx="30" ry="7" fill="#d9c08a" stroke="#a08850"/><path d="M-17 -123 Q-16 -142 0 -142 Q16 -142 17 -123 Z" fill="#d9c08a" stroke="#a08850"/><rect x="-17" y="-128" width="34" height="5" fill="#c0392b"/>`,
+      hat: `<ellipse cx="0" cy="-122" rx="30" ry="7" fill="#d9c08a" ${line}/><path d="M-17 -123 Q-16 -142 0 -142 Q16 -142 17 -123 Z" fill="#d9c08a" ${line}/><rect x="-17" y="-128" width="34" height="5" fill="#c0392b"/>`,
     }[acc] || "";
+
+    const torso = `<path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="${cloth}" ${line}/>`;
+    let outfit;
+    if (wear === "kimono" || wear === "yukata") {
+      const kimono = wear === "kimono";
+      const obi = kimono ? "#d9a520" : "#c0392b";
+      // 和服：宽袖、白色后领、宽腰带和背后的结；浴衣：窄一些的袖子、白色小花纹、红色腰带
+      const sleeve = kimono ? 46 : 40;
+      const pattern = kimono
+        ? `<g fill="rgba(255,255,255,.35)"><circle cx="-16" cy="-12" r="4"/><circle cx="14" cy="-60" r="4"/><circle cx="18" cy="-14" r="3"/><circle cx="-20" cy="-62" r="3"/></g>`
+        : `<g stroke="rgba(255,255,255,.7)" stroke-width="2" fill="none"><circle cx="-14" cy="-14" r="5"/><circle cx="12" cy="-62" r="5"/><circle cx="16" cy="-10" r="4"/><circle cx="-18" cy="-64" r="4"/><circle cx="-2" cy="-20" r="3"/></g>`;
+      outfit = `
+        <path d="M-24 -76 L-${sleeve} -68 L-${sleeve} -18 Q-${sleeve} -12 -${sleeve - 6} -12 L-26 -14 Z" fill="${cloth}" ${line}/>
+        <path d="M24 -76 L${sleeve} -68 L${sleeve} -18 Q${sleeve} -12 ${sleeve - 6} -12 L26 -14 Z" fill="${cloth}" ${line}/>
+        ${torso}
+        ${pattern}
+        <path d="M-13 -86 Q0 -78 13 -86" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+        <rect x="-31" y="-48" width="62" height="${kimono ? 18 : 12}" fill="${obi}" ${line}/>
+        <path d="M-2 -46 L-22 -${kimono ? 58 : 54} L-22 -${kimono ? 22 : 30} Z M2 -46 L22 -${kimono ? 58 : 54} L22 -${kimono ? 22 : 30} Z" fill="${obi}" ${line}/>
+        <rect x="-7" y="-50" width="14" height="${kimono ? 16 : 12}" rx="3" fill="${obi}" ${line}/>`;
+    } else {
+      outfit = `${torso}<path d="M-12 -84 Q0 -76 12 -84" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>`;
+    }
     return `
       <ellipse cx="0" cy="2" rx="30" ry="6" fill="rgba(0,0,0,.18)"/>
-      <path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="${cloth}"/>
-      <path d="M-12 -84 L0 -70 L12 -84" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>
-      <rect x="-31" y="-34" width="62" height="10" fill="rgba(0,0,0,.25)"/>
-      <rect x="-6" y="-94" width="12" height="12" fill="#f1c7a0"/>
-      <circle cx="-22" cy="-108" r="5" fill="#f1c7a0"/>
-      <circle cx="22" cy="-108" r="5" fill="#f1c7a0"/>
+      ${outfit}
+      <rect x="-6" y="-94" width="12" height="12" fill="#fbd9bf"/>
+      <circle cx="-22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
+      <circle cx="22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
       ${style === "long" ? back : ""}
-      <circle cx="0" cy="-112" r="23" fill="${hair}"/>
+      <circle cx="0" cy="-112" r="23" fill="${hair}" ${line}/>
       ${style === "long" ? "" : back}
       ${extra}`;
+  }
+
+  // 春田师傅（Q 版、柔和描边）。原点在吧台台面中心，向上画；台面以下会被吧台挡住
+  function chefSVG(look = "male") {
+    const line = `stroke="${ART.OUTLINE}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
+    const skin = "#fbd9bf";
+    const hair = look === "female" ? "#4a2f22" : "#33261f";
+    const backHair = look === "female"
+      ? `<path d="M-52 -98 Q-58 -172 0 -174 Q58 -172 52 -98 Q48 -86 38 -94 L36 -126 L-36 -126 L-38 -94 Q-48 -86 -52 -98 Z" fill="${hair}" ${line}/>`
+      : "";
+    const head = look === "female"
+      ? `<path d="M-42 -126 Q-30 -152 0 -148 Q30 -152 42 -126 Q22 -136 8 -130 Q0 -138 -8 -130 Q-22 -136 -42 -126 Z" fill="${hair}" ${line}/>
+         <path d="M-48 -134 Q-30 -186 0 -186 Q30 -186 48 -134 Q0 -150 -48 -134 Z" fill="#2c3e60" ${line}/>
+         <g fill="#fff"><circle cx="-24" cy="-156" r="3"/><circle cx="0" cy="-170" r="3"/><circle cx="22" cy="-158" r="3"/><circle cx="-8" cy="-148" r="2.5"/><circle cx="12" cy="-146" r="2.5"/></g>
+         <path d="M44 -138 l14 -4 l-4 12 z" fill="#2c3e60" ${line}/>`
+      : `<path d="M-44 -126 Q-44 -172 0 -172 Q44 -172 44 -126 Q24 -144 0 -142 Q-24 -144 -44 -126 Z" fill="${hair}" ${line}/>
+         <path d="M-47 -136 Q0 -156 47 -136 L46 -124 Q0 -143 -46 -124 Z" fill="#fff" ${line}/>
+         <g stroke="#2c3e60" stroke-width="4" stroke-linecap="round"><line x1="-36" y1="-138" x2="-30" y2="-128"/><line x1="-18" y1="-143" x2="-12" y2="-133"/><line x1="0" y1="-145" x2="6" y2="-135"/><line x1="18" y1="-143" x2="24" y2="-133"/><line x1="34" y1="-139" x2="40" y2="-129"/></g>
+         <path d="M44 -134 q12 -10 16 -2 q-4 8 -16 4 z M46 -128 q10 4 8 14" fill="#fff" ${line}/>`;
+    const brows = look === "female"
+      ? `<path d="M-24 -132 q6 -3 12 0 M12 -132 q6 -3 12 0" stroke="#4a2f22" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M-26 -132 q7 -4 14 0 M12 -132 q7 -4 14 0" stroke="#33261f" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    const lashes = look === "female"
+      ? `<path d="M-23 -118 l-4 -3 M23 -118 l4 -3" stroke="#5a4a40" stroke-width="2" stroke-linecap="round"/>`
+      : "";
+    const collar = look === "female" ? "#c0392b" : "#2c3e60";
+    return `
+      <!-- 身体：白色板前服（和服式交领），靛蓝前挂 -->
+      <path d="M-46 30 L-42 -52 Q-40 -76 -16 -80 L16 -80 Q40 -76 42 -52 L46 30 Z" fill="#fff" ${line}/>
+      <path d="M-16 -80 L10 -40 M16 -80 L-2 -60" fill="none" stroke="${collar}" stroke-width="5" stroke-linecap="round"/>
+      <path d="M-34 -30 L34 -30 L36 30 L-36 30 Z" fill="#2c3e60" ${line}/>
+      <circle cx="0" cy="-12" r="9" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <text x="0" y="-8" text-anchor="middle" font-size="11" fill="#fff" font-family="serif">舟</text>
+      <!-- 手臂和端着的木屐盘 -->
+      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="${ART.OUTLINE}" stroke-width="22" stroke-linecap="round"/>
+      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
+      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="${ART.OUTLINE}" stroke-width="22" stroke-linecap="round"/>
+      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
+      <g class="chef-geta">
+        <rect x="-62" y="-26" width="124" height="12" rx="3" fill="#c8915a" ${line}/>
+        <ellipse cx="-34" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
+        <path d="M-50 -36 Q-34 -46 -18 -36 Q-34 -32 -50 -36 Z" fill="#f28a36" ${line}/>
+        <ellipse cx="0" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
+        <path d="M-16 -36 Q0 -46 16 -36 Q0 -32 -16 -36 Z" fill="#b3202f" ${line}/>
+        <ellipse cx="34" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
+        <rect x="20" y="-44" width="28" height="9" rx="3" fill="#f3d04a" ${line}/>
+        <rect x="32" y="-44" width="4" height="16" fill="#2b3a2a"/>
+        <circle cx="-54" cy="-20" r="9" fill="${skin}" ${line}/>
+        <circle cx="54" cy="-20" r="9" fill="${skin}" ${line}/>
+      </g>
+      <!-- 头 -->
+      ${backHair}
+      <circle cx="-45" cy="-114" r="9" fill="${skin}" ${line}/>
+      <circle cx="45" cy="-114" r="9" fill="${skin}" ${line}/>
+      <circle cx="0" cy="-118" r="45" fill="${skin}" ${line}/>
+      ${head}
+      ${brows}
+      <path d="M-24 -116 q6 -8 12 0 M12 -116 q6 -8 12 0" stroke="#5a4a40" stroke-width="3" fill="none" stroke-linecap="round"/>
+      ${lashes}
+      <ellipse cx="-28" cy="-100" rx="9" ry="6" fill="#f5a3a0" opacity=".75"/>
+      <ellipse cx="28" cy="-100" rx="9" ry="6" fill="#f5a3a0" opacity=".75"/>
+      <path d="M-2 -108 q4 2 0 5" stroke="#d99a80" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M-8 -96 q8 8 16 0" stroke="#b5563f" stroke-width="3" fill="${look === "female" ? "#e8786e" : "none"}" stroke-linecap="round"/>`;
   }
 
   function toast(msg, gold = false) {
@@ -312,7 +410,7 @@
             const got = it.fish && it.fish.every((id) => state.collected.has(id));
             return `
               <li class="menu-item">
-                <div class="dish">${f ? swatchHTML(f) : ""}</div>
+                <div class="dish">${itemArt(it)}</div>
                 <div class="name"><b>${itemName(it)}${got ? `<span class="got">${t("menu.got")}</span>` : ""}</b><span>${it.jp}${itemDesc(it) ? " · " + itemDesc(it) : ""}</span></div>
                 <span class="price">${yen(it.price)}</span>
                 <button class="btn add" data-add="${it.id}">${t("menu.order")}</button>
@@ -329,17 +427,10 @@
   };
 
   // 师傅
-  const chefPortrait = `
-    <svg viewBox="560 200 160 160" class="chef-portrait" aria-hidden="true">
-      <rect x="560" y="200" width="160" height="160" fill="#e9dcc0"/>
-      <path d="M582 380 Q586 302 640 292 Q694 302 698 380 Z" fill="#fbfbf8" stroke="#c9c4b8" stroke-width="2"/>
-      <rect x="630" y="270" width="20" height="26" fill="#f1c7a0"/>
-      <circle cx="640" cy="248" r="30" fill="#f1c7a0"/>
-      <path d="M610 248 Q610 214 640 214 Q670 214 670 248 Q656 234 640 234 Q624 234 610 248Z" fill="#2b2b2b"/>
-      <rect x="609" y="228" width="62" height="10" rx="3" fill="#2c3e60"/>
-      <path d="M625 252 q5 -5 10 0 M645 252 q5 -5 10 0" stroke="#2b2b2b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <circle cx="622" cy="262" r="5" fill="#f3a6a0" opacity=".7"/><circle cx="658" cy="262" r="5" fill="#f3a6a0" opacity=".7"/>
-      <path d="M633 265 q7 6 14 0" stroke="#7a3b2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  const chefPortrait = () => `
+    <svg viewBox="-75 -195 150 150" class="chef-portrait" aria-hidden="true">
+      <rect x="-75" y="-195" width="150" height="150" fill="#e9dcc0"/>
+      ${chefSVG(state.chefLook)}
     </svg>`;
 
   function rollOmakase() {
@@ -387,7 +478,7 @@
 
       return `
         <div class="chef-wrap">
-          ${chefPortrait}
+          ${chefPortrait()}
           <div>
             <h2>${t("shop.chef")}</h2>
             <p class="sub">${D.shop.chefJp} · ${t("chef.title")}${atCounter ? " · " + t("chef.atCounter") : ""}</p>
@@ -435,7 +526,7 @@
       const f = fishById[id];
       const angle = (360 / n) * i;
       return `<div class="portion" ${removable ? `data-remove="${i}" title="${t("case.remove", { name: fishName(f) })}"` : ""} style="transform: rotate(${angle}deg)">
-        <div class="portion-inner">${sliceHTML(f).repeat(3)}</div></div>`;
+        <div class="portion-inner">${ART.sashimi(f, 3)}</div></div>`;
     }).join("");
   }
 
@@ -576,7 +667,10 @@
       }
       return `
         <h2>ご注文</h2>
-        <p class="sub">${t("cart.seat", { name: seat ? seatName(seat) : t("cart.seatNone") })}</p>
+        <div class="mode-toggle" role="radiogroup" aria-label="${t("cart.mode")}">
+          ${["dine", "takeout"].map((m) => `<button class="mode ${state.orderMode === m ? "active" : ""}" data-mode="${m}" role="radio" aria-checked="${state.orderMode === m}">${t("cart." + m)}</button>`).join("")}
+        </div>
+        <p class="sub">${state.orderMode === "takeout" ? t("cart.takeoutNote") : t("cart.seat", { name: seat ? seatName(seat) : t("cart.seatNone") })}</p>
         <ul class="cart-list">
           ${state.cart.map((l, i) => `
             <li class="cart-line">
@@ -601,13 +695,17 @@
         if (l.qty <= 0) state.cart.splice(b.dataset.dec, 1);
         updateHud(); rerender();
       }));
+      $$("[data-mode]", body).forEach((b) => b.addEventListener("click", () => {
+        state.orderMode = b.dataset.mode; rerender();
+      }));
       const submit = $("#cart-submit", body);
       if (submit) submit.addEventListener("click", submitOrder);
     },
   };
 
   function submitOrder() {
-    if (!state.seat) {
+    const mode = state.orderMode;
+    if (mode === "dine" && !state.seat) {
       toast(t("toast.pickSeat"));
       open("seats", "cart");
       return;
@@ -620,18 +718,23 @@
     store.set("fresh", [...state.fresh]);
     state.cart = [];
     updateHud();
-    open("receipt", lines, fresh);
+    open("receipt", lines, fresh, mode);
     fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
   }
 
   views.receipt = {
     cls: "book",
-    render: (lines, fresh) => {
+    render: (lines, fresh, mode = "dine") => {
       const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
+      // 这次点到的鱼：堂食摆在木屐盘上，打包装进外带盒
+      const served = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
+      const takeout = mode === "takeout";
+      const art = takeout ? ART.takeoutBox(served) : served.length ? ART.geta(served) : "";
       return `
         <div class="receipt">
-          <div class="stamp">注文承り</div>
-          <h2>${pick(chefLine("afterOrder"))}</h2>
+          <div class="stamp">${takeout ? "お持ち帰り" : "注文承り"}</div>
+          <h2>${takeout ? t("receipt.takeout") : pick(chefLine("afterOrder"))}</h2>
+          ${art ? `<div class="served">${art}</div>` : ""}
           <p class="sub">${t("receipt.summary", { n: lines.length })} <span class="price">${yen(total)}</span></p>
           ${fresh.length ? `
             <p>${t("receipt.new", { n: fresh.length })}</p>
@@ -654,7 +757,7 @@
       return `
         <div class="card locked" style="--rc:${r.color}">
           <span class="no">No.${no}</span><span class="rar">${r.label}</span>
-          ${swatchHTML(f, 2)}
+          ${sushiHTML(f)}
           <b>？？？</b>
           <span>${f.omakaseOnly ? t("card.omakaseOnly") : t("card.notYet")}</span>
         </div>`;
@@ -662,7 +765,7 @@
     return `
       <button class="card ${isNew ? "new" : ""}" data-fish="${f.id}" style="--rc:${r.color}">
         <span class="no">No.${no}</span><span class="rar">${r.label}</span>
-        ${swatchHTML(f, 2)}
+        ${sushiHTML(f)}
         <b>${fishName(f)}</b>
         <span>${f.jp}</span>
       </button>`;
@@ -704,7 +807,7 @@
       const r = D.rarity[f.rarity];
       return `
         <div class="detail">
-          <div class="detail-visual" style="--rc:${r.color}">${swatchHTML(f, 3)}</div>
+          <div class="detail-visual" style="--rc:${r.color}">${ART.nigiri(f)}${ART.sashimi(f, 3)}</div>
           <div>
             <h3>${fishName(f)}</h3>
             <p class="names">${f.jp} · ${f.kanji} · <i>${f.romaji}</i><br>${isEn() ? f.name : f.en}</p>
@@ -809,6 +912,7 @@
   const syncHudHeight = () => document.documentElement.style.setProperty("--hud-h", $(".hud").offsetHeight + "px");
   window.addEventListener("resize", syncHudHeight);
 
+  $("#chef-figure").innerHTML = chefSVG(state.chefLook);
   applyLang();
   syncHudHeight();
 })();
