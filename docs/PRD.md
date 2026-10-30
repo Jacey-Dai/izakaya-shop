@@ -346,6 +346,8 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | --- | --- | --- | --- | --- | --- |
 | T-43 | 采用 C 版微缩手作场景与男性春田；整体配色、弹窗、食物与动画统一；角色 / 性别选择继续留在 T-10 | 进行中（@Codex，已实现并验证，待 PR 合并） | Jacey 2026-10-30 确认 | assets/、index.html、css/、js/、PRD | 原有热点与点餐流程保留；中英、手机、减少动态效果及 file:// 验证；英文 PR description |
 
+| T-44 | 修复部署后新 HTML 混用旧 CSS / JS 缓存；资源版本号与热点透明兜底 | 进行中（@Codex/fix/T-44-asset-cache） | T-43 | index.html、tests/、PRD | 热点无黑块；CSS / JS 使用新 URL；旧样式缺失时点击层仍透明 |
+
 ### v0.2 协作基础与打磨
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
