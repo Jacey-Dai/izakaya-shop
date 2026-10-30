@@ -18,7 +18,7 @@
 | 招财猫 | 抽签，运气会提升师傅推荐的稀有度 |
 | 你自己 | 选座后坐在店里（背影），可以换发型、发色、衣服和配饰 |
 
-图鉴进度保存在浏览器本地（localStorage）。
+顶栏可以切换中文 / English。图鉴进度保存在浏览器本地（localStorage），换设备或清除浏览器数据会丢失，详见 PRD §5.5。
 
 ## 本地运行
 
@@ -35,6 +35,7 @@ python3 -m http.server 8000
   `omakaseOnly: true` 的鱼只能通过师傅推荐获得。
 - **加菜 / 改价格**：编辑 `js/data.js` 里的 `menu`。
 - **改师傅台词、抽签结果**：`js/data.js` 里的 `chef` 和 `omikuji`。
+- **英文**：内容翻译在 `js/data.en.js`，界面文案在 `js/i18n.js`。加中文时记得同时加英文。
 - **改场景**：`index.html` 里的 `<svg class="scene">`。每个可互动的东西是一个
   `<g class="hotspot" data-id="...">`，悬停提示写在 `data.js` 的 `hotspots` 里，
   点击后打开 `js/app.js` 里同名的 `views.<id>`。
@@ -44,7 +45,9 @@ python3 -m http.server 8000
 ```
 index.html      页面和店内场景（SVG）
 css/style.css   样式
-js/data.js      鱼、菜单、座位、台词等所有内容数据
+js/i18n.js      界面文案（中 / 英）
+js/data.js      鱼、菜单、座位、台词等所有内容数据（中文）
+js/data.en.js   内容数据的英文翻译
 js/app.js       交互逻辑
 docs/PRD.md     完整产品需求文档（多 agent 协作请先读）
 CLAUDE.md       给 agent 的入口说明（AGENTS.md 内容相同）

@@ -2,10 +2,12 @@
   "use strict";
 
   const D = window.SHOP_DATA;
+  const EN = window.SHOP_DATA_EN || {};
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-  const yen = (n) => (n === 0 ? "免费" : "¥" + n.toLocaleString("ja-JP"));
+  const yen = (n) => (n === 0 ? t("free") : "¥" + n.toLocaleString("ja-JP"));
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const pickIndex = (arr) => Math.floor(Math.random() * arr.length);
 
   // ---------- 本地存档（失败时静默，页面照常运行） ----------
   // 店名改为小舟后前缀从 koharu. 换成 kobune.，读取时兼容旧存档
@@ -37,12 +39,42 @@
   const itemById = {};
   D.menu.forEach((cat) => cat.items.forEach((it) => { itemById[it.id] = it; }));
 
+  // ---------- 语言 ----------
+  // 界面文案查 I18N；内容数据中文在 data.js，英文在 data.en.js，缺英文时回退中文
+  const isEn = () => state.lang === "en";
+  function t(key, vars = {}) {
+    const dict = window.I18N[state.lang] || window.I18N.zh;
+    const v = dict[key] ?? window.I18N.zh[key] ?? key;
+    return typeof v === "string" ? v.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "") : v;
+  }
+  const en = (kind, id, field) => {
+    const entry = EN[kind] && EN[kind][id];
+    return entry && (field ? entry[field] : entry);
+  };
+  const tx = (kind, id, field, zh) => (isEn() && en(kind, id, field)) || zh;
+  const fishName = (f) => (isEn() ? f.en : f.name);
+  const fishText = (f, field) => tx("fish", f.id, field, f[field]);
+  const itemName = (it) => (it.fish && it.id.startsWith("s-") ? fishName(fishById[it.fish[0]]) : tx("menu", it.id, "name", it.name));
+  const itemDesc = (it) => (it.id.startsWith("s-") ? t("menu.sashimiDesc") : tx("menu", it.id, "desc", it.desc));
+  const catName = (c) => (isEn() && EN.categories && EN.categories[c.id]) || c.name;
+  const seatName = (s) => tx("seats", s.id, "name", s.name);
+  const seatDesc = (s) => tx("seats", s.id, "desc", s.desc);
+  const rarityName = (r) => (isEn() && EN.rarity && EN.rarity[r]) || D.rarity[r].zh;
+  const optName = (o) => (isEn() && EN.guest && EN.guest[o.id]) || o.name;
+  const chefLine = (key, i) => {
+    const list = isEn() && EN.chef && EN.chef[key];
+    if (i === undefined) return (list || D.chef[key]);
+    return (list && list[i]) || D.chef[key][i];
+  };
+  const shopName = () => t("shop.name");
+
   function defaultGuest() {
     return Object.fromEntries(Object.entries(D.guest).map(([k, opts]) => [k, opts[0].id]));
   }
 
   // ---------- 状态 ----------
   const state = {
+    lang: store.get("lang", (navigator.language || "zh").toLowerCase().startsWith("zh") ? "zh" : "en"),
     cart: [],
     plate: [],
     seat: store.get("seat", null),
@@ -116,8 +148,8 @@
     const cartBtn = $("#hud-cart");
     cartBtn.querySelector("b").textContent = count;
     const seat = D.seats.find((s) => s.id === state.seat);
-    $("#hud-seat").textContent = "座位：" + (seat ? seat.name : "未选");
-    $("#hud-zukan").textContent = `图鉴 ${state.collected.size}/${D.fish.length}`;
+    $("#hud-seat").textContent = t("hud.seat", { name: seat ? seatName(seat) : t("hud.seatNone") });
+    $("#hud-zukan").textContent = t("hud.zukan", { n: state.collected.size, total: D.fish.length });
 
     const guest = $("#guest");
     if (seat) {
@@ -143,13 +175,23 @@
     else state.cart.push({ qty: 1, ...line });
     updateHud();
     bumpCart();
-    toast(`已加入：${line.name}`);
+    toast(t("toast.added", { name: lineName(line) }));
+  }
+
+  // 订单行的名称和备注在显示时才生成，切换语言后也会跟着变
+  function lineName(l) {
+    if (l.kind === "item") return itemName(itemById[l.key]);
+    return t(l.kind === "omakase" ? "chef.omakaseName" : "case.plateName");
+  }
+  function lineNote(l) {
+    if (!l.counts) return "";
+    return Object.entries(l.counts).map(([id, n]) => fishName(fishById[id]) + (n > 1 ? "×" + n : "")).join(" · ");
   }
 
   function addMenuItem(id) {
     const it = itemById[id];
     if (!it) return;
-    addToCart({ key: it.id, name: it.name, price: it.price, fish: it.fish || [] });
+    addToCart({ key: it.id, kind: "item", price: it.price, fish: it.fish || [] });
   }
 
   // ---------- 弹窗 ----------
@@ -157,11 +199,13 @@
   const modal = $("#modal");
   const body = $("#modal-body");
   let current = null;
+  let currentArgs = [];
 
   function open(id, ...args) {
     const view = views[id];
     if (!view) return;
     current = id;
+    currentArgs = args;
     modal.className = "modal " + (view.cls || id);
     body.innerHTML = view.render(...args);
     overlay.hidden = false;
@@ -169,7 +213,7 @@
     modal.scrollTop = 0;
   }
   function close() { overlay.hidden = true; current = null; }
-  function rerender(...args) { if (current) open(current, ...args); }
+  function rerender(...args) { if (current) open(current, ...(args.length ? args : currentArgs)); }
 
   $("#modal-close").addEventListener("click", close);
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
@@ -193,20 +237,12 @@
     render: () => `
       <h2>いらっしゃいませ</h2>
       <p class="sub">${D.shop.name} · ${D.shop.jp} · ${D.shop.en}</p>
-      <p>欢迎光临！这是一家只有吧台和一间小座敷的寿司小店。把鼠标移到店里的东西上看看吧：</p>
-      <ul>
-        <li><b>门口立牌</b>：今日鲜货，每天都不一样</li>
-        <li><b>墙上木札</b> / <b>酒架</b> / <b>桌面菜单</b>：三种不同的菜单</li>
-        <li><b>鱼柜</b>：自己挑鱼，拼一盘专属刺身</li>
-        <li><b>春田师傅</b>：聊天，或者让他来一份おまかせ</li>
-        <li><b>挂轴</b>：鱼图鉴。吃过的鱼会被收录，有些鱼只有师傅推荐才遇得到</li>
-        <li><b>招财猫</b>：抽签，好运会影响师傅推荐</li>
-        <li><b>你自己</b>：选座后你会坐在店里，点一下自己可以换发型和衣服</li>
-      </ul>
-      <p>先选个座位，再点菜结账，吃到的鱼就会出现在图鉴里。</p>
+      <p>${t("noren.welcome")}</p>
+      <ul>${t("noren.items").map(([k, v]) => `<li><b>${k}</b>${isEn() ? ": " : "："}${v}</li>`).join("")}</ul>
+      <p>${t("noren.outro")}</p>
       <div class="btn-row">
-        <button class="btn primary" data-open="seats">去选座位</button>
-        <button class="btn" data-open="tablemenu">直接看菜单</button>
+        <button class="btn primary" data-open="seats">${t("btn.goSeats")}</button>
+        <button class="btn" data-open="tablemenu">${t("btn.seeMenu")}</button>
       </div>`,
   };
 
@@ -214,11 +250,11 @@
   views.board = {
     render: () => `
       <h2>本日のおすすめ</h2>
-      <p class="sub">今日鲜货 · 点一下即可加入订单</p>
+      <p class="sub">${t("board.sub")}</p>
       <div class="chalk-cols">
         ${todaysFresh.map((f) => `
-          <button class="chalk-col" data-add="s-${f.id}">${f.kanji}<small>${yen(f.price)}</small></button>`).join("")}
-        <button class="chalk-col special" data-open="chef">おまかせ<small>时价</small></button>
+          <button class="chalk-col" data-add="s-${f.id}" title="${fishName(f)}">${f.kanji}<small>${yen(f.price)}</small></button>`).join("")}
+        <button class="chalk-col special" data-open="chef">おまかせ<small>${t("board.market")}</small></button>
       </div>
       <p class="board-note">— 今日も元気に営業中 —</p>`,
   };
@@ -228,10 +264,10 @@
     render: () => {
       const hot = D.menu.find((c) => c.id === "hot").items;
       const sweet = D.menu.find((c) => c.id === "sweet").items;
-      const tag = (it, cls = "") => `<button class="wood-tag ${cls}" data-add="${it.id}" title="${it.name}${it.desc ? " · " + it.desc : ""}">${it.jp}<small>${yen(it.price)}</small></button>`;
+      const tag = (it, cls = "") => `<button class="wood-tag ${cls}" data-add="${it.id}" title="${itemName(it)}${itemDesc(it) ? " · " + itemDesc(it) : ""}">${it.jp}<small>${yen(it.price)}</small></button>`;
       return `
         <h2>お品書き</h2>
-        <p class="sub">墙上的木札 · 一品料理与甜品，点木札加入订单</p>
+        <p class="sub">${t("tags.sub")}</p>
         <div class="tag-wall">${hot.map((it) => tag(it)).join("")}${sweet.map((it) => tag(it, "sweet")).join("")}</div>`;
     },
   };
@@ -243,16 +279,16 @@
       const items = D.menu.find((c) => c.id === "drinks").items;
       return `
         <h2>お飲み物</h2>
-        <p class="sub">酒架上的饮品</p>
+        <p class="sub">${t("drinks.sub")}</p>
         <div class="drink-grid">
           ${items.map((it) => `
             <div class="drink">
               <div class="bottle" style="--c:${it.bottle}"></div>
               <b>${it.jp}</b>
-              <span>${it.name} · ${it.desc}</span>
+              <span>${itemName(it)} · ${itemDesc(it)}</span>
               <div class="price">${yen(it.price)}</div>
               <div class="btn-row" style="justify-content:center;margin-top:8px">
-                <button class="btn" data-add="${it.id}">来一杯</button>
+                <button class="btn" data-add="${it.id}">${t("drinks.order")}</button>
               </div>
             </div>`).join("")}
         </div>`;
@@ -266,9 +302,9 @@
       const cat = D.menu.find((c) => c.id === state.menuTab);
       return `
         <h2>メニュー</h2>
-        <p class="sub">桌上的菜单册 · 带 <span class="got" style="margin:0">已收录</span> 的鱼已在图鉴中</p>
+        <p class="sub">${t("menu.sub", { tag: `<span class="got" style="margin:0">${t("menu.got")}</span>` })}</p>
         <div class="tabs">
-          ${D.menu.map((c) => `<button class="tab ${c.id === state.menuTab ? "active" : ""}" data-tab="${c.id}">${c.name}<small>${c.jp}</small></button>`).join("")}
+          ${D.menu.map((c) => `<button class="tab ${c.id === state.menuTab ? "active" : ""}" data-tab="${c.id}">${catName(c)}<small>${c.jp}</small></button>`).join("")}
         </div>
         <ul class="menu-list">
           ${cat.items.map((it) => {
@@ -277,9 +313,9 @@
             return `
               <li class="menu-item">
                 <div class="dish">${f ? swatchHTML(f) : ""}</div>
-                <div class="name"><b>${it.name}${got ? '<span class="got">已收录</span>' : ""}</b><span>${it.jp}${it.desc ? " · " + it.desc : ""}</span></div>
+                <div class="name"><b>${itemName(it)}${got ? `<span class="got">${t("menu.got")}</span>` : ""}</b><span>${it.jp}${itemDesc(it) ? " · " + itemDesc(it) : ""}</span></div>
                 <span class="price">${yen(it.price)}</span>
-                <button class="btn add" data-add="${it.id}">点</button>
+                <button class="btn add" data-add="${it.id}">${t("menu.order")}</button>
               </li>`;
           }).join("")}
         </ul>`;
@@ -326,24 +362,25 @@
   views.chef = {
     render: (mode = "hello") => {
       const atCounter = state.seat === "counter";
-      let line = pick(D.chef.greetings);
-      if (atCounter && Math.random() < 0.6) line = pick(D.chef.counterExtra);
+      const greetings = chefLine("greetings");
+      let line = greetings[pickIndex(greetings)];
+      if (atCounter && Math.random() < 0.6) line = pick(chefLine("counterExtra"));
       let extra = "";
 
       if (mode === "fresh") {
-        line = `今天的好货是：${todaysFresh.map((f) => f.name).join("、")}。门口立牌上也写着呢。`;
+        line = t("chef.fresh", { list: todaysFresh.map(fishName).join(t("chef.listSep")) });
       }
       if (mode === "omakase") {
         const om = state.omakase;
         const legendary = om.fish.some((f) => f.rarity === 4);
-        line = D.chef.omakaseIntro + (legendary ? D.chef.legendary : "");
+        line = chefLine("omakaseIntro") + (legendary ? chefLine("legendary") : "");
         extra = `
           <div class="omakase-preview">
             <div class="plate">${plateInnerHTML(om.fish.map((f) => f.id))}</div>
-            <p class="plate-summary">${om.fish.map((f) => `${f.name}（${D.rarity[f.rarity].label}）`).join(" · ")}<br><span class="price">${yen(om.price)}</span></p>
+            <p class="plate-summary">${om.fish.map((f) => `${fishName(f)} (${D.rarity[f.rarity].label})`).join(" · ")}<br><span class="price">${yen(om.price)}</span></p>
             <div class="btn-row" style="justify-content:center">
-              <button class="btn primary" id="om-take">就要这盘</button>
-              <button class="btn" id="om-reroll">换一换</button>
+              <button class="btn primary" id="om-take">${t("chef.take")}</button>
+              <button class="btn" id="om-reroll">${t("chef.reroll")}</button>
             </div>
           </div>`;
       }
@@ -352,13 +389,13 @@
         <div class="chef-wrap">
           ${chefPortrait}
           <div>
-            <h2>${D.shop.chef}</h2>
-            <p class="sub">${D.shop.chefJp} · 板前 ${atCounter ? "· 你正坐在他面前" : ""}</p>
+            <h2>${t("shop.chef")}</h2>
+            <p class="sub">${D.shop.chefJp} · ${t("chef.title")}${atCounter ? " · " + t("chef.atCounter") : ""}</p>
             <div class="bubble">${line}</div>
             <div class="btn-row">
-              <button class="btn primary" id="chef-omakase">おまかせ（交给师傅）</button>
-              <button class="btn" data-open="fishcase">我想自己挑鱼</button>
-              <button class="btn" id="chef-fresh">今天有什么好鱼？</button>
+              <button class="btn primary" id="chef-omakase">${t("chef.btnOmakase")}</button>
+              <button class="btn" data-open="fishcase">${t("chef.btnSelf")}</button>
+              <button class="btn" id="chef-fresh">${t("chef.btnFresh")}</button>
             </div>
           </div>
         </div>
@@ -374,8 +411,8 @@
           const om = state.omakase;
           addToCart({
             key: "omakase-" + Date.now(),
-            name: "师傅推荐拼盘",
-            note: om.fish.map((f) => f.name).join(" · "),
+            kind: "omakase",
+            counts: Object.fromEntries(om.fish.map((f) => [f.id, 1])),
             price: om.price,
             fish: om.fish.map((f) => f.id),
           });
@@ -392,12 +429,12 @@
 
   function plateInnerHTML(fishIds, removable = false) {
     const center = `<div class="plate-center"><div class="daikon"></div><div class="shiso"></div><div class="wasabi"></div></div>`;
-    if (!fishIds.length) return center + `<div class="plate-empty">从左边挑鱼放到盘子里</div>`;
+    if (!fishIds.length) return center + `<div class="plate-empty">${t("case.platePrompt")}</div>`;
     const n = fishIds.length;
     return center + fishIds.map((id, i) => {
       const f = fishById[id];
       const angle = (360 / n) * i;
-      return `<div class="portion" ${removable ? `data-remove="${i}" title="拿掉 ${f.name}"` : ""} style="transform: rotate(${angle}deg)">
+      return `<div class="portion" ${removable ? `data-remove="${i}" title="${t("case.remove", { name: fishName(f) })}"` : ""} style="transform: rotate(${angle}deg)">
         <div class="portion-inner">${sliceHTML(f).repeat(3)}</div></div>`;
     }).join("");
   }
@@ -408,30 +445,30 @@
       const total = state.plate.reduce((s, id) => s + fishById[id].price, 0);
       return `
         <h2>ネタケース</h2>
-        <p class="sub">自选鱼生 · 每点一次放一份（三切），最多 ${MAX_PORTIONS} 份；点盘子里的鱼可以拿掉</p>
+        <p class="sub">${t("case.sub", { max: MAX_PORTIONS })}</p>
         <div class="builder">
           <div class="case-grid">
             ${menuFish.map((f) => `
               <button class="fish-btn" data-fish="${f.id}">
                 ${swatchHTML(f, 2)}
-                <b>${f.name}</b>
+                <b>${fishName(f)}</b>
                 <span>${f.jp}</span>
                 <span class="price">${yen(f.price)}</span>
               </button>`).join("")}
           </div>
           <div class="plate-area">
             <div class="plate" id="plate">${plateInnerHTML(state.plate, true)}</div>
-            <p class="plate-summary">${state.plate.length ? `${state.plate.length} / ${MAX_PORTIONS} 份 · <span class="price">${yen(total)}</span>` : "盘子还是空的"}</p>
+            <p class="plate-summary">${state.plate.length ? `${t("case.count", { n: state.plate.length, max: MAX_PORTIONS })} · <span class="price">${yen(total)}</span>` : t("case.empty")}</p>
             <div class="btn-row" style="justify-content:center">
-              <button class="btn primary" id="plate-order" ${state.plate.length ? "" : "disabled"}>放入订单</button>
-              <button class="btn" id="plate-clear" ${state.plate.length ? "" : "disabled"}>清空</button>
+              <button class="btn primary" id="plate-order" ${state.plate.length ? "" : "disabled"}>${t("case.order")}</button>
+              <button class="btn" id="plate-clear" ${state.plate.length ? "" : "disabled"}>${t("case.clear")}</button>
             </div>
           </div>
         </div>`;
     },
     mount: () => {
       $$(".fish-btn", body).forEach((b) => b.addEventListener("click", () => {
-        if (state.plate.length >= MAX_PORTIONS) { toast("盘子装满啦"); return; }
+        if (state.plate.length >= MAX_PORTIONS) { toast(t("toast.plateFull")); return; }
         state.plate.push(b.dataset.fish);
         rerender();
       }));
@@ -445,8 +482,8 @@
         state.plate.forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
         addToCart({
           key: "plate-" + Date.now(),
-          name: "自选刺身拼盘",
-          note: Object.entries(counts).map(([id, n]) => fishById[id].name + (n > 1 ? "×" + n : "")).join(" · "),
+          kind: "plate",
+          counts,
           price: state.plate.reduce((s, id) => s + fishById[id].price, 0),
           fish: [...new Set(state.plate)],
         });
@@ -461,12 +498,12 @@
     cls: "book",
     render: (then) => `
       <h2>お席</h2>
-      <p class="sub">选一个座位吧 · <button class="link" data-open="guest">换个样子</button></p>
+      <p class="sub">${t("seats.sub")} · <button class="link" data-open="guest">${t("seats.changeLook")}</button></p>
       <div class="seat-grid">
         ${D.seats.map((s) => `
           <button class="seat-card ${state.seat === s.id ? "active" : ""}" data-seat="${s.id}">
-            <b>${s.name}</b><small>${s.jp}</small>
-            <p>${s.desc}</p>
+            <b>${seatName(s)}</b><small>${s.jp}</small>
+            <p>${seatDesc(s)}</p>
           </button>`).join("")}
       </div>`,
     mount: (then) => {
@@ -475,19 +512,18 @@
         store.set("seat", state.seat);
         updateHud();
         const s = D.seats.find((x) => x.id === state.seat);
-        toast(`已入座：${s.name}`);
+        toast(t("toast.seated", { name: seatName(s) }));
         if (then) open(then); else close();
       }));
     },
   };
 
   // 客人形象
-  const GUEST_LABELS = { hairStyle: "发型", hairColor: "发色", outfit: "衣服", accessory: "配饰" };
   views.guest = {
     cls: "book",
     render: () => `
       <h2>お客さん</h2>
-      <p class="sub">打扮一下再入座吧。你的样子会显示在座位上。</p>
+      <p class="sub">${t("guest.sub")}</p>
       <div class="guest-wrap">
         <svg class="guest-preview" viewBox="-60 -165 120 175" aria-hidden="true">
           <rect x="-60" y="-165" width="120" height="175" fill="#e9dcc0"/>
@@ -497,17 +533,17 @@
         <div class="guest-opts">
           ${Object.entries(D.guest).map(([k, opts]) => `
             <div class="opt-row">
-              <span>${GUEST_LABELS[k] || k}</span>
+              <span>${t("guest." + k)}</span>
               <div>${opts.map((o) => `
                 <button class="opt ${state.guest[k] === o.id ? "active" : ""}" data-k="${k}" data-v="${o.id}">
-                  ${o.color ? `<i style="background:${o.color}"></i>` : ""}${o.name}
+                  ${o.color ? `<i style="background:${o.color}"></i>` : ""}${optName(o)}
                 </button>`).join("")}</div>
             </div>`).join("")}
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn primary" data-open="seats">${state.seat ? "换座位" : "去选座位"}</button>
-        <button class="btn" id="guest-random">随机一下</button>
+        <button class="btn primary" data-open="seats">${state.seat ? t("guest.changeSeat") : t("btn.goSeats")}</button>
+        <button class="btn" id="guest-random">${t("guest.random")}</button>
       </div>`,
     mount: () => {
       const save = () => { store.set("guest", state.guest); updateHud(); rerender(); };
@@ -530,29 +566,29 @@
       if (!state.cart.length) {
         return `
           <h2>ご注文</h2>
-          <p class="sub">你的订单</p>
-          <p class="empty">还没有点菜哦。</p>
+          <p class="sub">${t("cart.sub")}</p>
+          <p class="empty">${t("cart.empty")}</p>
           <div class="btn-row" style="justify-content:center">
-            <button class="btn" data-open="tablemenu">看菜单</button>
-            <button class="btn" data-open="fishcase">自选鱼生</button>
-            <button class="btn" data-open="chef">交给师傅</button>
+            <button class="btn" data-open="tablemenu">${t("cart.menu")}</button>
+            <button class="btn" data-open="fishcase">${t("cart.self")}</button>
+            <button class="btn" data-open="chef">${t("cart.chef")}</button>
           </div>`;
       }
       return `
         <h2>ご注文</h2>
-        <p class="sub">座位：${seat ? seat.name : "还没选"}</p>
+        <p class="sub">${t("cart.seat", { name: seat ? seatName(seat) : t("cart.seatNone") })}</p>
         <ul class="cart-list">
           ${state.cart.map((l, i) => `
             <li class="cart-line">
-              <div><b>${l.name}</b>${l.note ? `<small>${l.note}</small>` : ""}</div>
-              <div class="qty"><button data-dec="${i}" aria-label="减少">−</button><span>${l.qty}</span><button data-inc="${i}" aria-label="增加">+</button></div>
+              <div><b>${lineName(l)}</b>${lineNote(l) ? `<small>${lineNote(l)}</small>` : ""}</div>
+              <div class="qty"><button data-dec="${i}" aria-label="${t("cart.dec")}">−</button><span>${l.qty}</span><button data-inc="${i}" aria-label="${t("cart.inc")}">+</button></div>
               <span class="price">${yen(l.price * l.qty)}</span>
             </li>`).join("")}
         </ul>
-        <div class="cart-total"><span>合计</span><span class="price">${yen(total)}</span></div>
+        <div class="cart-total"><span>${t("cart.total")}</span><span class="price">${yen(total)}</span></div>
         <div class="btn-row" style="justify-content:flex-end">
-          <button class="btn" data-open="tablemenu">再点一些</button>
-          <button class="btn primary" id="cart-submit">下单</button>
+          <button class="btn" data-open="tablemenu">${t("cart.more")}</button>
+          <button class="btn primary" id="cart-submit">${t("cart.submit")}</button>
         </div>`;
     },
     mount: () => {
@@ -572,7 +608,7 @@
 
   function submitOrder() {
     if (!state.seat) {
-      toast("先选个座位吧");
+      toast(t("toast.pickSeat"));
       open("seats", "cart");
       return;
     }
@@ -585,7 +621,7 @@
     state.cart = [];
     updateHud();
     open("receipt", lines, fresh);
-    fresh.forEach((id, i) => setTimeout(() => toast(`图鉴新收录：${fishById[id].name}`, true), 400 + i * 500));
+    fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
   }
 
   views.receipt = {
@@ -595,15 +631,15 @@
       return `
         <div class="receipt">
           <div class="stamp">注文承り</div>
-          <h2>${pick(D.chef.afterOrder)}</h2>
-          <p class="sub">${lines.length} 样菜 · 合计 <span class="price">${yen(total)}</span></p>
+          <h2>${pick(chefLine("afterOrder"))}</h2>
+          <p class="sub">${t("receipt.summary", { n: lines.length })} <span class="price">${yen(total)}</span></p>
           ${fresh.length ? `
-            <p>这次吃到了 <b>${fresh.length}</b> 种新的鱼，已收录进图鉴！</p>
+            <p>${t("receipt.new", { n: fresh.length })}</p>
             <div class="unlock-row">${fresh.map((id) => cardHTML(fishById[id], true)).join("")}</div>`
-          : `<p>这次的鱼都已经在图鉴里了。试试师傅推荐，说不定能遇到稀有的鱼。</p>`}
+          : `<p>${t("receipt.none")}</p>`}
           <div class="btn-row" style="justify-content:center">
-            <button class="btn primary" data-open="zukan">打开图鉴</button>
-            <button class="btn" data-open="chef">再请师傅推荐</button>
+            <button class="btn primary" data-open="zukan">${t("receipt.zukan")}</button>
+            <button class="btn" data-open="chef">${t("receipt.again")}</button>
           </div>
         </div>`;
     },
@@ -620,14 +656,14 @@
           <span class="no">No.${no}</span><span class="rar">${r.label}</span>
           ${swatchHTML(f, 2)}
           <b>？？？</b>
-          <span>${f.omakaseOnly ? "只在师傅推荐中出现" : "还没吃过"}</span>
+          <span>${f.omakaseOnly ? t("card.omakaseOnly") : t("card.notYet")}</span>
         </div>`;
     }
     return `
       <button class="card ${isNew ? "new" : ""}" data-fish="${f.id}" style="--rc:${r.color}">
         <span class="no">No.${no}</span><span class="rar">${r.label}</span>
         ${swatchHTML(f, 2)}
-        <b>${f.name}</b>
+        <b>${fishName(f)}</b>
         <span>${f.jp}</span>
       </button>`;
   }
@@ -637,15 +673,15 @@
     render: () => {
       const n = state.collected.size;
       const total = D.fish.length;
-      const filters = [["all", "全部"], ...Object.entries(D.rarity).map(([k, v]) => [k, `${v.label} · ${v.zh}`])];
+      const filters = [["all", t("zukan.all")], ...Object.entries(D.rarity).map(([k, v]) => [k, `${v.label} · ${rarityName(k)}`])];
       const list = D.fish.filter((f) => state.zukanFilter === "all" || String(f.rarity) === state.zukanFilter);
       return `
         <h2>魚図鑑</h2>
-        <p class="sub">吃过的鱼会被收录。点开卡片查看日语、英语名称和口感。</p>
+        <p class="sub">${t("zukan.sub")}</p>
         <div class="zukan-head">
           <div class="progress">
             <div class="progress-bar"><i style="width:${(n / total) * 100}%"></i></div>
-            <small>已收集 ${n} / ${total}${n === total ? " · 全部集齐！春田师傅向你鞠了一躬。" : ""}</small>
+            <small>${t("zukan.progress", { n, total })}${n === total ? t("zukan.complete") : ""}</small>
           </div>
           <div class="filter">${filters.map(([k, label]) => `<button data-filter="${k}" class="${state.zukanFilter === k ? "active" : ""}">${label}</button>`).join("")}</div>
         </div>
@@ -670,19 +706,19 @@
         <div class="detail">
           <div class="detail-visual" style="--rc:${r.color}">${swatchHTML(f, 3)}</div>
           <div>
-            <h3>${f.name}</h3>
-            <p class="names">${f.jp} · ${f.kanji} · <i>${f.romaji}</i><br>${f.en}</p>
+            <h3>${fishName(f)}</h3>
+            <p class="names">${f.jp} · ${f.kanji} · <i>${f.romaji}</i><br>${isEn() ? f.name : f.en}</p>
             <dl class="facts">
-              <dt>稀有度</dt><dd style="color:${r.color};font-weight:600">${r.label}（${r.zh}）</dd>
-              <dt>口感</dt><dd>${f.texture}</dd>
-              <dt>风味</dt><dd>${f.flavor}</dd>
-              <dt>旬</dt><dd>${f.season}</dd>
-              <dt>价格</dt><dd class="price">${yen(f.price)} / 三切</dd>
+              <dt>${t("fish.rarity")}</dt><dd style="color:${r.color};font-weight:600">${r.label} (${rarityName(f.rarity)})</dd>
+              <dt>${t("fish.texture")}</dt><dd>${fishText(f, "texture")}</dd>
+              <dt>${t("fish.flavor")}</dt><dd>${fishText(f, "flavor")}</dd>
+              <dt>${t("fish.season")}</dt><dd>${fishText(f, "season")}</dd>
+              <dt>${t("fish.price")}</dt><dd class="price">${yen(f.price)} / ${t("fish.perPortion")}</dd>
             </dl>
-            <p>${f.desc}</p>
+            <p>${fishText(f, "desc")}</p>
             <div class="btn-row">
-              <button class="btn" data-open="zukan">← 返回图鉴</button>
-              ${f.omakaseOnly ? "" : `<button class="btn primary" data-add="s-${f.id}">再来一份</button>`}
+              <button class="btn" data-open="zukan">${t("fish.back")}</button>
+              ${f.omakaseOnly ? "" : `<button class="btn primary" data-add="s-${f.id}">${t("fish.again")}</button>`}
             </div>
           </div>
         </div>`;
@@ -693,16 +729,20 @@
   views.neko = {
     cls: "book",
     render: () => {
-      const o = pick(D.omikuji);
+      // 换语言重绘时沿用同一支签
+      if (state.omikujiIdx === undefined || !state.keepOmikuji) state.omikujiIdx = pickIndex(D.omikuji);
+      state.keepOmikuji = false;
+      const o = D.omikuji[state.omikujiIdx];
+      const text = (isEn() && EN.omikuji && EN.omikuji[state.omikujiIdx] && EN.omikuji[state.omikujiIdx].text) || o.text;
       state.luck = Math.max(state.luck, o.luck);
       return `
         <div class="omikuji">
           <h2>おみくじ</h2>
-          <p class="sub">招财猫轻轻招了招手……</p>
+          <p class="sub">${t("neko.sub")}</p>
           <div class="slip">${o.result}</div>
-          <p>${o.text}</p>
+          <p>${text}</p>
           <div class="btn-row" style="justify-content:center">
-            <button class="btn primary" data-open="chef">去找师傅</button>
+            <button class="btn primary" data-open="chef">${t("neko.goChef")}</button>
           </div>
         </div>`;
     },
@@ -712,13 +752,12 @@
   const tip = $("#tooltip");
   $$(".hotspot").forEach((el) => {
     const id = el.dataset.id;
-    const info = D.hotspots[id];
     const siblings = $$(`.hotspot[data-id="${id}"]`);
     el.setAttribute("tabindex", "0");
     el.setAttribute("role", "button");
-    el.setAttribute("aria-label", info.title);
 
     el.addEventListener("mouseenter", () => {
+      const info = hotspotInfo(id);
       siblings.forEach((s) => s.classList.add("linked"));
       tip.innerHTML = `<b>${info.title}</b><span>${info.hint}</span>`;
       tip.hidden = false;
@@ -738,5 +777,38 @@
     });
   });
 
-  updateHud();
+  function hotspotInfo(id) {
+    const zh = D.hotspots[id];
+    return { title: tx("hotspots", id, "title", zh.title), hint: tx("hotspots", id, "hint", zh.hint) };
+  }
+
+  // 切换语言：更新静态文案、热点无障碍标签、顶栏，并重绘当前弹窗
+  function applyLang() {
+    document.documentElement.lang = isEn() ? "en" : "zh-CN";
+    $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+    const btn = $("#lang-toggle");
+    btn.textContent = t("lang.switch");
+    btn.setAttribute("aria-label", t("lang.switchLabel"));
+    $("#modal-close").setAttribute("aria-label", t("close"));
+    $$(".hotspot").forEach((el) => el.setAttribute("aria-label", hotspotInfo(el.dataset.id).title));
+    updateHud();
+    syncHudHeight();
+  }
+
+  $("#lang-toggle").addEventListener("click", () => {
+    state.lang = isEn() ? "zh" : "en";
+    store.set("lang", state.lang);
+    applyLang();
+    if (current) {
+      state.keepOmikuji = true;
+      rerender();
+    }
+  });
+
+  // 弹窗避开顶栏
+  const syncHudHeight = () => document.documentElement.style.setProperty("--hud-h", $(".hud").offsetHeight + "px");
+  window.addEventListener("resize", syncHudHeight);
+
+  applyLang();
+  syncHudHeight();
 })();

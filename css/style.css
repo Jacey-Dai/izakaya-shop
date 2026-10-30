@@ -38,6 +38,8 @@ button { font: inherit; cursor: pointer; }
   margin: 0 auto;
   padding: 16px;
   color: var(--washi);
+  position: relative;
+  z-index: 45; /* 弹窗打开时顶栏仍可用（切换语言、看订单） */
 }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-mark {
@@ -59,6 +61,7 @@ button { font: inherit; cursor: pointer; }
   transition: background .2s;
 }
 .hud-btn:hover { background: rgba(244, 236, 216, .2); }
+.hud-lang { min-width: 56px; font-weight: 600; }
 .hud-cart { background: var(--shu); border-color: var(--shu); }
 .hud-cart b {
   display: inline-block; min-width: 20px; margin-left: 4px;
@@ -127,7 +130,7 @@ button { font: inherit; cursor: pointer; }
   position: fixed; inset: 0; z-index: 40;
   background: rgba(15, 12, 10, .65);
   display: grid; place-items: center;
-  padding: 16px;
+  padding: var(--hud-h, 16px) 16px 16px; /* 给顶栏留位置 */
   animation: fade .2s;
 }
 .overlay[hidden] { display: none; }
@@ -135,7 +138,7 @@ button { font: inherit; cursor: pointer; }
 .modal {
   position: relative;
   width: min(880px, 100%);
-  max-height: calc(100vh - 32px);
+  max-height: calc(100vh - var(--hud-h, 16px) - 16px);
   overflow: auto;
   background: var(--washi);
   border-radius: var(--radius);
