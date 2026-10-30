@@ -5,6 +5,12 @@
  */
 window.I18N = {
   zh: {
+    "scene.menu": "翻开菜单",
+    "scene.fish": "自选鱼生",
+    "scene.chef": "和春田聊聊",
+    "scene.luck": "抽一支签",
+    "scene.caption": "一盏暖灯，一碗热饭。今晚，慢慢来。",
+    "scene.label": "小舟微缩居酒屋，探索店内物品",
     "lang.switch": "EN",
     "lang.switchLabel": "Switch to English",
     "shop.name": "小舟",
@@ -123,6 +129,12 @@ window.I18N = {
   },
 
   en: {
+    "scene.menu": "Browse the menu",
+    "scene.fish": "Build a sashimi plate",
+    "scene.chef": "Chat with Haruta",
+    "scene.luck": "Draw a fortune",
+    "scene.caption": "A warm light. A comforting meal. Take your time tonight.",
+    "scene.label": "Kobune miniature izakaya, explore objects in the shop",
     "lang.switch": "中文",
     "lang.switchLabel": "切换到中文",
     "shop.name": "Kobune",

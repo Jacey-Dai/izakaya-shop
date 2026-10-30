@@ -82,8 +82,8 @@
     collected: new Set(store.get("zukan", [])),
     fresh: new Set(store.get("fresh", [])),
     guest: { ...defaultGuest(), ...store.get("guest", {}) },
-    // 春田师傅默认男性；女性形象留给玩家“当厨师”时选择（T-10），可用 ?chef=female 预览
-    chefLook: new URLSearchParams(location.search).get("chef") === "female" ? "female" : D.chefLooks[0].id,
+    // 当前只实现春田师傅；玩家角色与性别选择继续留在 PRD T-10。
+    chefLook: "male",
     orderMode: "dine",
     luck: 0,
     omakase: null,
@@ -116,11 +116,15 @@
   const rarityColor = (r) => D.rarity[r].color;
 
   // 客人背影，原点在座位面中心，向上画。画风与师傅一致（柔和描边）
+  let guestArtId = 0;
   function guestSVG(g) {
     const opt = (k) => D.guest[k].find((o) => o.id === g[k]) || D.guest[k][0];
-    const line = `stroke="${ART.OUTLINE}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"`;
-    const hair = opt("hairColor").color;
-    const cloth = opt("outfit").color;
+    const line = `stroke="${ART.OUTLINE}" stroke-opacity=".6" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"`;
+    const id = "guest-art-" + guestArtId++;
+    const hairColor = opt("hairColor").color;
+    const clothColor = opt("outfit").color;
+    const hair = `url(#${id}-hair)`;
+    const cloth = `url(#${id}-cloth)`;
     const style = g.hairStyle;
     const acc = g.accessory;
     const wear = opt("clothing").id;
@@ -159,78 +163,27 @@
       outfit = `${torso}<path d="M-12 -84 Q0 -76 12 -84" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>`;
     }
     return `
+      <defs>
+        <radialGradient id="${id}-hair" cx=".35" cy=".25" r=".8"><stop stop-color="${hairColor}"/><stop offset="1" stop-color="#201b19"/></radialGradient>
+        <linearGradient id="${id}-cloth"><stop stop-color="${clothColor}"/><stop offset=".35" stop-color="${clothColor}"/><stop offset="1" stop-color="#34333c"/></linearGradient>
+      </defs>
       <ellipse cx="0" cy="2" rx="30" ry="6" fill="rgba(0,0,0,.18)"/>
-      ${outfit}
+      <g filter="url(#guest-soft)">${outfit}</g>
+      <path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="url(#guest-cloth)" pointer-events="none"/>
       <rect x="-6" y="-94" width="12" height="12" fill="#fbd9bf"/>
       <circle cx="-22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
       <circle cx="22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
       ${style === "long" ? back : ""}
       <circle cx="0" cy="-112" r="23" fill="${hair}" ${line}/>
+      <g fill="none" stroke="#fff6de" stroke-opacity=".12" stroke-linecap="round" stroke-width="2"><path d="M-15 -119 Q-10 -135 -1 -132"/><path d="M-9 -117 Q-5 -128 4 -129"/><path d="M5 -118 Q9 -127 13 -123"/></g>
       ${style === "long" ? "" : back}
       ${extra}`;
   }
 
-  // 春田师傅（Q 版、柔和描边）。原点在吧台台面中心，向上画；台面以下会被吧台挡住
-  function chefSVG(look = "male") {
-    const line = `stroke="${ART.OUTLINE}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
-    const skin = "#fbd9bf";
-    const hair = look === "female" ? "#4a2f22" : "#33261f";
-    const backHair = look === "female"
-      ? `<path d="M-52 -98 Q-58 -172 0 -174 Q58 -172 52 -98 Q48 -86 38 -94 L36 -126 L-36 -126 L-38 -94 Q-48 -86 -52 -98 Z" fill="${hair}" ${line}/>`
-      : "";
-    const head = look === "female"
-      ? `<path d="M-42 -126 Q-30 -152 0 -148 Q30 -152 42 -126 Q22 -136 8 -130 Q0 -138 -8 -130 Q-22 -136 -42 -126 Z" fill="${hair}" ${line}/>
-         <path d="M-48 -134 Q-30 -186 0 -186 Q30 -186 48 -134 Q0 -150 -48 -134 Z" fill="#2c3e60" ${line}/>
-         <g fill="#fff"><circle cx="-24" cy="-156" r="3"/><circle cx="0" cy="-170" r="3"/><circle cx="22" cy="-158" r="3"/><circle cx="-8" cy="-148" r="2.5"/><circle cx="12" cy="-146" r="2.5"/></g>
-         <path d="M44 -138 l14 -4 l-4 12 z" fill="#2c3e60" ${line}/>`
-      : `<path d="M-44 -126 Q-44 -172 0 -172 Q44 -172 44 -126 Q24 -144 0 -142 Q-24 -144 -44 -126 Z" fill="${hair}" ${line}/>
-         <path d="M-47 -136 Q0 -156 47 -136 L46 -124 Q0 -143 -46 -124 Z" fill="#fff" ${line}/>
-         <g stroke="#2c3e60" stroke-width="4" stroke-linecap="round"><line x1="-36" y1="-138" x2="-30" y2="-128"/><line x1="-18" y1="-143" x2="-12" y2="-133"/><line x1="0" y1="-145" x2="6" y2="-135"/><line x1="18" y1="-143" x2="24" y2="-133"/><line x1="34" y1="-139" x2="40" y2="-129"/></g>
-         <path d="M44 -134 q12 -10 16 -2 q-4 8 -16 4 z M46 -128 q10 4 8 14" fill="#fff" ${line}/>`;
-    const brows = look === "female"
-      ? `<path d="M-24 -132 q6 -3 12 0 M12 -132 q6 -3 12 0" stroke="#4a2f22" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
-      : `<path d="M-26 -132 q7 -4 14 0 M12 -132 q7 -4 14 0" stroke="#33261f" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
-    const lashes = look === "female"
-      ? `<path d="M-23 -118 l-4 -3 M23 -118 l4 -3" stroke="#5a4a40" stroke-width="2" stroke-linecap="round"/>`
-      : "";
-    const collar = look === "female" ? "#c0392b" : "#2c3e60";
-    return `
-      <!-- 身体：白色板前服（和服式交领），靛蓝前挂 -->
-      <path d="M-46 30 L-42 -52 Q-40 -76 -16 -80 L16 -80 Q40 -76 42 -52 L46 30 Z" fill="#fff" ${line}/>
-      <path d="M-16 -80 L10 -40 M16 -80 L-2 -60" fill="none" stroke="${collar}" stroke-width="5" stroke-linecap="round"/>
-      <path d="M-34 -30 L34 -30 L36 30 L-36 30 Z" fill="#2c3e60" ${line}/>
-      <circle cx="0" cy="-12" r="9" fill="none" stroke="#fff" stroke-width="2.5"/>
-      <text x="0" y="-8" text-anchor="middle" font-size="11" fill="#fff" font-family="serif">舟</text>
-      <!-- 手臂和端着的木屐盘 -->
-      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="${ART.OUTLINE}" stroke-width="22" stroke-linecap="round"/>
-      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
-      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="${ART.OUTLINE}" stroke-width="22" stroke-linecap="round"/>
-      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
-      <g class="chef-geta">
-        <rect x="-62" y="-26" width="124" height="12" rx="3" fill="#c8915a" ${line}/>
-        <ellipse cx="-34" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
-        <path d="M-50 -36 Q-34 -46 -18 -36 Q-34 -32 -50 -36 Z" fill="#f28a36" ${line}/>
-        <ellipse cx="0" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
-        <path d="M-16 -36 Q0 -46 16 -36 Q0 -32 -16 -36 Z" fill="#b3202f" ${line}/>
-        <ellipse cx="34" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
-        <rect x="20" y="-44" width="28" height="9" rx="3" fill="#f3d04a" ${line}/>
-        <rect x="32" y="-44" width="4" height="16" fill="#2b3a2a"/>
-        <circle cx="-54" cy="-20" r="9" fill="${skin}" ${line}/>
-        <circle cx="54" cy="-20" r="9" fill="${skin}" ${line}/>
-      </g>
-      <!-- 头 -->
-      ${backHair}
-      <circle cx="-45" cy="-114" r="9" fill="${skin}" ${line}/>
-      <circle cx="45" cy="-114" r="9" fill="${skin}" ${line}/>
-      <circle cx="0" cy="-118" r="45" fill="${skin}" ${line}/>
-      ${head}
-      ${brows}
-      <path d="M-24 -116 q6 -8 12 0 M12 -116 q6 -8 12 0" stroke="#5a4a40" stroke-width="3" fill="none" stroke-linecap="round"/>
-      ${lashes}
-      <ellipse cx="-28" cy="-100" rx="9" ry="6" fill="#f5a3a0" opacity=".75"/>
-      <ellipse cx="28" cy="-100" rx="9" ry="6" fill="#f5a3a0" opacity=".75"/>
-      <path d="M-2 -108 q4 2 0 5" stroke="#d99a80" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <path d="M-8 -96 q8 8 16 0" stroke="#b5563f" stroke-width="3" fill="${look === "female" ? "#e8786e" : "none"}" stroke-linecap="round"/>`;
+  // 原创手作人偶角色，场景与对话共用本地透明资源，无网络依赖。
+  // 原点维持在台面中心；独立 SVG image 便于沿用原来的场景接口。
+  function chefSVG() {
+    return `<image href="assets/art/haruta.webp" x="-140" y="-270" width="280" height="420" preserveAspectRatio="xMidYMid meet"/>`;
   }
 
   function toast(msg, gold = false) {
@@ -324,7 +277,7 @@
     const go = e.target.closest("[data-open]");
     if (go) open(go.dataset.open);
   });
-  $$(".hud [data-open]").forEach((b) => b.addEventListener("click", () => open(b.dataset.open)));
+  $$(".hud [data-open], .scene-shortcuts [data-open]").forEach((b) => b.addEventListener("click", () => open(b.dataset.open)));
 
   // ---------- 各个视图 ----------
   const views = {};
@@ -428,8 +381,8 @@
 
   // 师傅
   const chefPortrait = () => `
-    <svg viewBox="-75 -195 150 150" class="chef-portrait" aria-hidden="true">
-      <rect x="-75" y="-195" width="150" height="150" fill="#e9dcc0"/>
+    <svg viewBox="-100 -280 200 220" class="chef-portrait" aria-hidden="true">
+      <rect x="-100" y="-280" width="200" height="220" fill="#f4e6d1"/>
       ${chefSVG(state.chefLook)}
     </svg>`;
 
@@ -874,9 +827,18 @@
       siblings.forEach((s) => s.classList.remove("linked"));
       tip.hidden = true;
     });
+    el.addEventListener("focus", () => {
+      const info = hotspotInfo(id);
+      const box = el.getBoundingClientRect();
+      tip.innerHTML = `<b>${info.title}</b><span>${info.hint}</span>`;
+      tip.style.left = Math.max(8, Math.min(box.left, window.innerWidth - 260)) + "px";
+      tip.style.top = Math.min(box.bottom + 8, window.innerHeight - 90) + "px";
+      tip.hidden = false;
+    });
+    el.addEventListener("blur", () => { tip.hidden = true; });
     el.addEventListener("click", () => { tip.hidden = true; open(id); });
     el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(id); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tip.hidden = true; open(id); }
     });
   });
 
@@ -888,6 +850,7 @@
   // 切换语言：更新静态文案、热点无障碍标签、顶栏，并重绘当前弹窗
   function applyLang() {
     document.documentElement.lang = isEn() ? "en" : "zh-CN";
+    $(".scene").setAttribute("aria-label", t("scene.label"));
     $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
     const btn = $("#lang-toggle");
     btn.textContent = t("lang.switch");
@@ -912,7 +875,7 @@
   const syncHudHeight = () => document.documentElement.style.setProperty("--hud-h", $(".hud").offsetHeight + "px");
   window.addEventListener("resize", syncHudHeight);
 
-  $("#chef-figure").innerHTML = chefSVG(state.chefLook);
+  $("#chef-figure").innerHTML = `<g transform="translate(628 450)">${chefSVG()}</g>`;
   applyLang();
   syncHudHeight();
 })();

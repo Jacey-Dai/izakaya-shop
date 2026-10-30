@@ -1,16 +1,15 @@
 /*
  * 小舟 · 寿司与刺身插画
- * 画风（PRD §1.1.1，Jacey 2026-10-30 定为一种）：温馨、可爱、萌。
- * 取两份参考的中间：可爱风的圆润造型和高光 + 复古风稍粗的暖棕描边、略微柔和的配色和很淡的纸张颗粒。
- * 全部原创自绘。这里只放“画图”的纯函数，不读写状态。参数 f 是 SHOP_DATA.fish 里的一条鱼。
+ * 画风：微缩手作。柔和立体明暗、米粒纹理和陶器般高光，与店内人偶一致。
+ * 原创程序绘制，按鱼种颜色生成渐变，保留所有鱼种和摆盘 API。
  */
 window.KOBUNE_ART = (() => {
   // 统一的画风参数；厨师和客人（app.js）也用同一个描边色
-  const T = { ol: "#6b5446", w: 3, rice: "#fffaf0", riceOl: "#a8968a", grain: "#e0d5c6", mute: 0.08, filter: true };
+  const T = { ol: "#805b48", w: 1.1, rice: "#fffaf0", riceOl: "#a8968a", grain: "#e0d5c6", mute: 0.08, filter: true };
 
   const OL = () => `stroke="${T.ol}" stroke-width="${T.w}" stroke-linejoin="round" stroke-linecap="round"`;
   const RICE_OL = () => `stroke="${T.riceOl}" stroke-width="${T.w}" stroke-linejoin="round"`;
-  const HI = 'stroke="#fff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".75"';
+  const HI = 'stroke="#fff" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".65"';
   const NORI = "#1f2a22";
 
   // 颜色轻轻往暖色方向拉一点，显得更温馨
@@ -23,8 +22,21 @@ window.KOBUNE_ART = (() => {
   }
   const fc = (f) => ({ ...f, color: col(f.color), color2: col(f.color2) });
 
-  const svg = (w, h, body, cls = "art") =>
-    `<svg class="${cls}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">${T.filter ? `<g filter="url(#kb-grain)">${body}</g>` : body}</svg>`;
+  const shade = (hex, factor) => "#" + hex.slice(1).match(/../g).map((part) => {
+    const channel = parseInt(part, 16);
+    return Math.round(factor > 0 ? channel + (255 - channel) * factor : channel * (1 + factor)).toString(16).padStart(2, "0");
+  }).join("");
+
+  // 每张 SVG 独立 gradient id，避免多张鱼卡片互相串色。
+  let illustrationId = 0;
+  const svg = (w, h, body, cls = "art") => {
+    const prefix = "dish-" + illustrationId++;
+    const colors = [...new Set([...body.matchAll(/fill="(#[0-9a-fA-F]{6})"/g)].map((m) => m[1]))];
+    const defs = colors.map((color, i) => `<linearGradient id="${prefix}-${i}" x1="0" y1="0" x2=".3" y2="1"><stop stop-color="${shade(color, .22)}"/><stop offset=".38" stop-color="${color}"/><stop offset="1" stop-color="${shade(color, -.22)}"/></linearGradient>`).join("");
+    // 上侧柔和高光、下侧暖暗部，保留每条鱼自己的颜色。
+    const shaded = body.replace(/fill="(#[0-9a-fA-F]{6})"/g, (_, color) => `fill="url(#${prefix}-${colors.indexOf(color)})"`);
+    return `<svg class="${cls}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><defs>${defs}</defs>${T.filter ? `<g filter="url(#kb-grain)">${shaded}</g>` : shaded}</svg>`;
+  };
 
   // ---------- 单片刺身（40×60） ----------
   function slicePiece(f) {
