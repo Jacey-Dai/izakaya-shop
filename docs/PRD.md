@@ -9,7 +9,7 @@
 | 产品负责人 | Jacey（所有产品决策由 Jacey 拍板） |
 | 仓库 | https://github.com/Jacey-Dai/izakaya-shop |
 | 线上地址 | https://jacey-dai.github.io/izakaya-shop/ （需在仓库 Settings → Pages 开启） |
-| 当前版本 | v0.1.7（完整榻榻米房间与座位驱动镜头切换） |
+| 当前版本 | v0.1.8（微缩玩偶客人、完整换装与前景比例调整） |
 | 文档更新 | 2026-10-30 |
 
 ---
@@ -27,7 +27,7 @@
 - **统一画风**（最新决定替代早期平涂 / 复古混合方案）：温馨、可爱、有生活细节的微缩居酒屋。蜂蜜木色和奶油白为主，陶土红、靛蓝和少量鼠尾草绿点缀。木纹、布料、陶器有可见材质，灯笼局部暖光，界面使用奶油纸面、圆角及柔和阴影。
   - 场景采用原创生成的本地 WebP 底图，叠加独立男性角色、可访问 SVG 热点及轻微动态；不依赖外部渲染库、运行时生成或网络图片。
   - 食物仍按 `data.js` 动态生成 SVG，通过细描边、渐变、高光、颗粒和投影表现柔和体积，不用一张通用插画替代不同鱼种。
-  - 客人保留原有自定义服装、颜色、发型与配饰，增加衣料明暗及柔和投影；当前仍是程序绘制背影。
+  - 客人使用与师傅一致的原创生成微缩玩偶背影：独立立体发束、针织 / 棉麻纹理与真实褶皱；保留原有全部发型、发色、服装颜色及配饰，预览与场景共用素材。
   - 动画仅用于师傅轻微呼吸、灯笼光晕与蒸汽；所有动画尊重减少动态效果设置。
 - **本次角色范围**（Jacey 后续明确）：只制作默认男性春田；“当 chef / 当顾客”尚未实现，继续留在 T-10。女性示意图只作后续设计参考，性别选择 UI 和女性运行时素材暂缓。
 - **客人**：访客自己，形象可自定义（F-13）。
@@ -149,10 +149,13 @@
 ### F-13 客人形象 · お客さん
 - 客人以**背影**出现在所选座位上（面向师傅），没选座时不显示。
 - 可选项来自 `SHOP_DATA.guest`：发型（短发 / 丸子头 / 马尾 / 长发）、发色、服装款式（便服 / 和服 / 浴衣）、衣服颜色、配饰（无 / 发簪 / 帽子），每组第一项为默认值；支持“随机一下”。
-- 和服：宽袖、白色后领、金色宽腰带，背后打着结；浴衣：袖子窄一些，有白色小圆花纹，系红色腰带。颜色跟着「颜色」选项变。
+- 角色采用原创透明图集 `guest-dolls.webp`，四列为短发 / 丸子头 / 马尾 / 长发，三行为便服 / 和服 / 浴衣。每格为完整坐姿玩偶，从背后面向餐桌。材质与春田一致，非原来的几何 SVG 拼接。
+- 便服为针织毛衣；和服为宽袖、象牙白腰带及立体背结；浴衣为窄袖、小花纹与陶土红腰带。发色和主衣色通过材质区域与中性色掩膜映射，保留肤色、织物明暗、腰带与纹样。
+- 帽子与发簪采用独立透明图集 `guest-accessories.webp`，与本体同为手工微缩质感。
+- 座敷坐姿位置和服务铃 / 茶具点击区一并微调，避免前景人偶遮挡点餐入口。人物在吧台中高 190 场景单位，在更近的座敷前景中高 220 单位；相比旧背影约增大 30% / 50%，头部与师傅、坐垫和桌沿的比例一并校准。换装预览用 220 单位，避免小图难以辨认细节。
 - 入口：点击场景里的自己，或选座弹窗里的「换个样子」。选择保存在本地。
-- 画法在 `app.js` 的 `guestSVG(guest)`，原点是座位面中心、向上绘制；场景和预览共用。
-- **AC**：改任意选项，预览和场景里的形象同时更新；刷新后保持；换座位时形象跟着移动。
+- 渲染在 `app.js` 的 `guestSVG(guest, seat)`，原点是座位面中心、向上绘制；场景和预览共用图集、材质映射、配饰和透明点击区。`seat` 为 `counter` / `tatami` / `preview`；图集只读取指定格子，角色之间不串图。
+- **AC**：改任意选项，预览和场景里的形象同时更新；四种发型 × 三种服装均有独立玩偶素材，所有发色 / 衣色 / 配饰均产生可见变化；刷新后保持；换座位时保留形象并按视角调整大小。旧 `kobune.guest` 格式不变，无迁移或选项删减。
 
 ### F-14 中英双语 · Language
 - 两种语言：简体中文 `zh`、英文 `en`。顶栏按钮显示“要切换到的语言”（中文界面显示 `EN`，英文界面显示 `中文`）。
@@ -197,7 +200,7 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 ### 5.3 其他
 - `rarity`：`{ label, zh, color }`
 - `seats`：`{ id, name, jp, desc, marker: [x, y] }`（marker 是客人坐下的 SVG 坐标）
-- `guest`：`{ hairStyle[], hairColor[], clothing[], outfit[], accessory[] }`，每项 `{ id, name, color? }`。新增发型或配饰需要同时在 `guestSVG` 里加画法；只加颜色只改数据。
+- `guest`：`{ hairStyle[], hairColor[], clothing[], outfit[], accessory[] }`，每项 `{ id, name, color? }`。新增发型或配饰需要同时扩展 `guestSVG` 的图集帧 / 配饰定义；只加颜色只改数据。
 - `hotspots`：`{ [data-id]: { title, hint } }`
 - `chef`：`greetings[]`、`counterExtra[]`、`omakaseIntro`、`legendary`、`afterOrder[]`
 - `omikuji`：`{ result, text, luck: 0–3 }[]`
@@ -248,7 +251,7 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 ### 6.1 约束
 - 纯 HTML / CSS / 原生 JS，不引入框架和构建工具；外部网络资源只用 Google Fonts（不可用时使用系统字体）。场景与角色资源随仓库本地提供，`file://` 可用。
 - 要能直接用 `file://` 打开（所以不用 ES module 的 `import`，用普通 `<script>` 按顺序加载）。
-- 本地 CSS 与所有 JS 统一使用 `?v=20261030-3` 发布版本。以后修改 CSS / JS 必须同步递增这些 URL 的版本，避免新 HTML 混用旧缓存；直接打开 `file://` 仍使用同一文件。SVG 热点在标记内声明透明 fill / stroke，提示圆点声明默认 opacity=0；即使样式缺失也不能出现不透明黑块。
+- 本地 CSS 与所有 JS 统一使用 `?v=20261030-4` 发布版本。以后修改 CSS / JS 必须同步递增这些 URL 的版本，避免新 HTML 混用旧缓存；直接打开 `file://` 仍使用同一文件。SVG 热点在标记内声明透明 fill / stroke，提示圆点声明默认 opacity=0；即使样式缺失也不能出现不透明黑块。
 - 脚本加载顺序：`i18n.js` → `data.js` → `data.en.js` → `art.js` → `app.js`。
 
 ### 6.2 文件
@@ -286,7 +289,7 @@ views.<id> = {
 - 纸张颗粒来自 `index.html` 里的 `#kb-grain` 滤镜，只加在食物插画上。
 
 ### 6.4 公共函数（app.js 内）
-`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`swatchHTML(fish, n)`（刺身）、`sushiHTML(fish)`（握寿司）、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`chefSVG()`、`updateRoom(seat)`、`chooseSeat(id)`、`itemArt(menuItem)`、`store.get/set`。
+`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`swatchHTML(fish, n)`（刺身）、`sushiHTML(fish)`（握寿司）、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest, seat)`、`chefSVG()`、`updateRoom(seat)`、`chooseSeat(id)`、`itemArt(menuItem)`、`store.get/set`。
 语言相关：`t(key, vars)` 取界面文案；`fishName(f)`、`fishText(f, field)`、`itemName(it)`、`itemDesc(it)`、`seatName(s)`、`rarityName(r)`、`chefLine(key, i?)` 取当前语言的内容；`applyLang()` 刷新整页。
 CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: string[], counts? }`。名称和备注不存死，显示时由 `lineName(l)` / `lineNote(l)` 按当前语言生成。
 
@@ -353,9 +356,9 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | --- | --- | --- | --- | --- | --- |
 | T-43 | 采用 C 版微缩手作场景与男性春田；整体配色、弹窗、食物与动画统一；角色 / 性别选择继续留在 T-10 | 完成（PR #4 已合并） | Jacey 2026-10-30 确认 | assets/、index.html、css/、js/、PRD | 原有热点与点餐流程保留；中英、手机、减少动态效果及 file:// 验证；英文 PR description |
 | T-44 | 修复部署后新 HTML 混用旧 CSS / JS 缓存；资源版本号与热点透明兜底 | 完成（PR #5 已合并） | T-43 | index.html、tests/、PRD | 热点无黑块；CSS / JS 使用新 URL；旧样式缺失时点击层仍透明 |
-| T-45 | 选择和室座敷后切换到独立完整榻榻米视角，吧台与座敷双向切换；保留点餐和存档 | 进行中（@Codex，已实现并通过浏览器回归，待 PR 合并） | Jacey 2026-10-30 授权 | assets/、index.html、app.js、css/、i18n.js、tests/ | 座敷全景；选座与刷新同步镜头；热点、双语、手机、减少动态效果可用 |
+| T-45 | 选择和室座敷后切换到独立完整榻榻米视角，吧台与座敷双向切换；保留点餐和存档 | 完成（PR #6 已合并） | Jacey 2026-10-30 授权 | assets/、index.html、app.js、css/、i18n.js、tests/ | 座敷全景；选座与刷新同步镜头；热点、双语、手机、减少动态效果可用 |
 
-| T-46 | 客人重做为与师傅一致的微缩手作小玩偶；保留全部自定义并调整前景坐姿比例 | 进行中（@Codex/feat/T-46-doll-guests） | Jacey 2026-10-30 授权 | assets/、app.js、css/、PRD、tests/ | 可见布料与立体发束；预览和双场景同步；所有换装与旧存档有效；人物大小协调 |
+| T-46 | 客人重做为与师傅一致的微缩手作小玩偶；保留全部自定义并调整前景坐姿比例 | 进行中（@Codex，已实现并通过完整浏览器回归，待 PR 合并） | Jacey 2026-10-30 授权 | assets/、app.js、css/、PRD、tests/ | 可见布料与立体发束；预览和双场景同步；所有换装与旧存档有效；人物大小协调 |
 
 ### v0.2 协作基础与打磨
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
@@ -468,6 +471,8 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | --- | --- | --- | --- |
 | `assets/art/izakaya-room.webp` | OpenAI ImageGen，本次按 Jacey 已选 C 概念图生成的无人物场景 | AI 生成，Codex 编排 | 用户授权用于本仓库；不包含参考素材站原图，无第三方素材署名要求；不宣称独占著作权 |
 | `assets/art/tatami-room.webp` | OpenAI ImageGen，以现有小舟场景为视觉参考生成的独立完整座敷 | AI 生成，Codex 编排 | 用户授权用于本仓库；原创生成，不含第三方素材站原图 |
+| `assets/art/guest-dolls.webp` | OpenAI ImageGen，参考春田师傅生成的 4×3 客人坐姿图集 | AI 生成，Codex 编排 | 用户授权用于本仓库；原创生成，与师傅统一画风 |
+| `assets/art/guest-accessories.webp` | OpenAI ImageGen，独立帽子及发簪透明图集 | AI 生成，Codex 编排 | 同上 |
 | `assets/art/haruta.webp` | OpenAI ImageGen，本次生成的原创男性板前角色，透明背景 | AI 生成，Codex 编排 | 同上；与场景共用微缩手作风格 |
 
 ---
@@ -484,3 +489,4 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 2026-10-30 | v0.1.5 | T-43：C 版微缩手作美术重制，本地场景 + 男性春田独立素材、暖色界面、食物渐变和材质、细微动态、手机场景滑动与快捷入口；保留现有玩法，T-10 玩家角色 / 性别选择仍未实现 |
 | 2026-10-30 | v0.1.6 | T-44：CSS / JS 统一资源版本，避免部署后混用旧缓存；SVG 热点增加原生透明兜底，新增无样式与资源 URL 回归检查。最初因环境断连未运行；T-45 恢复运行环境后纳入完整浏览器回归。 |
 | 2026-10-30 | v0.1.7 | T-45：独立完整榻榻米场景；镜头跟随已保存座位；双向换座、全套热点与快捷入口、手机全景及减少动态效果；保留现有订单与收集数据 |
+| 2026-10-30 | v0.1.8 | T-46：客人改为微缩手作玩偶；12 种发型 / 服装组合、材质颜色与独立配饰；吧台 / 座敷分别放大到 190 / 220 单位，预览同步；保留所有选项与旧存档 |
