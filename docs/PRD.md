@@ -9,7 +9,7 @@
 | 产品负责人 | Jacey（所有产品决策由 Jacey 拍板） |
 | 仓库 | https://github.com/Jacey-Dai/izakaya-shop |
 | 线上地址 | https://jacey-dai.github.io/izakaya-shop/ （需在仓库 Settings → Pages 开启） |
-| 当前版本 | v0.1.3（可玩原型 + 客人形象 + 中英双语 + 新版师傅） |
+| 当前版本 | v0.1.4（可玩原型 + 中英双语 + 新画风 + 打包外带） |
 | 文档更新 | 2026-10-30 |
 
 ---
@@ -24,6 +24,10 @@
 - **店名**：小舟（こぶね · Kobune Sushi）。寿司店常用船形器皿（舟盛り）盛刺身，名字小巧、有画面感。暖帘写「小 舟 鮨」，招牌标志为「舟」。
 - **师傅**：春田师傅（春田さん），默认男性。
 - **厨师画风**（Jacey 2026-10-30 定）：Q 版大头、圆脸、闭眼笑、腮红、柔和的灰褐色描边、平涂颜色，可爱亲切。必须穿能体现日料师傅身份的传统服装：白色板前服（和服式交领）、靛蓝前挂（围裙）、头上戴扭结鉢巻或三角巾。参考图只用来定画风，角色全部原创自绘（SVG），不直接使用任何素材站的图片。
+- **食物画风**（Jacey 2026-10-30 提供两种参考）：
+  - `soft`（**当前默认**）：和厨师同一套可爱风格。握寿司是白色米饭团配柔和描边、带纹理条纹和白色高光的鱼片；军舰是海苔包米饭、上面堆鱼籽或海胆；细卷是海苔圈、米饭和馅料；刺身片错开叠放。
+  - `retro`（备选）：粗黑描边、低饱和暖色、印刷颗粒感。已经实现，网址加 `?art=retro` 可以预览。
+  - 两种画风的切换都由 `js/art.js` 统一控制。以后新增的食物（小菜、拉面、手卷、饮品等）都要在 `art.js` 里同时支持两种画风。用哪种画风、要不要让访客自己切换，待 Jacey 决定（§10 Q10）。
 - **客人**：访客自己，形象可自定义（F-13）。
 
 ### 1.2 目标
@@ -123,8 +127,10 @@
 
 ### F-10 订单与下单
 - 订单行：名称、备注、数量加减（减到 0 删除）、小计；合计。
-- 下单：把所有行涉及的鱼加入图鉴；清空订单；显示小票（新收录的鱼以卡片展示）和金色 toast。
-- **AC**：重复吃同一种鱼不会重复收录；刷新页面后图鉴进度还在，订单清空。
+- **用餐方式**：订单页顶部可以选「店内堂食」或「打包带走」，默认堂食。堂食必须先选座位；打包不需要座位。
+- 下单：把所有行涉及的鱼加入图鉴（打包也算吃过）；清空订单；显示小票（新收录的鱼以卡片展示）和金色 toast。
+- 小票插画：堂食时把这次点到的鱼做成握寿司，摆在木屐盘上（最多 5 贯）；打包时装进**外带盒**，即黑色托盘、绿色叶片隔断、透明塑料盖，再贴一张「小舟」红色标签（8 格，按点到的鱼依次排列）。印章分别是「注文承り」和「お持ち帰り」。
+- **AC**：重复吃同一种鱼不会重复收录；刷新页面后图鉴进度还在，订单清空；打包下单不会弹出选座。
 
 ### F-11 鱼图鉴
 - 网格卡片：编号、稀有度、鱼片图、名字。未收录显示剪影和“？？？”，隐藏鱼提示“只在师傅推荐中出现”。
@@ -134,7 +140,8 @@
 
 ### F-13 客人形象 · お客さん
 - 客人以**背影**出现在所选座位上（面向师傅），没选座时不显示。
-- 可选项来自 `SHOP_DATA.guest`：发型（短发 / 丸子头 / 马尾 / 长发）、发色、衣服颜色、配饰（无 / 发簪 / 帽子），每组第一项为默认值；支持“随机一下”。
+- 可选项来自 `SHOP_DATA.guest`：发型（短发 / 丸子头 / 马尾 / 长发）、发色、服装款式（便服 / 和服 / 浴衣）、衣服颜色、配饰（无 / 发簪 / 帽子），每组第一项为默认值；支持“随机一下”。
+- 和服：宽袖、白色后领、金色宽腰带，背后打着结；浴衣：袖子窄一些，有白色小圆花纹，系红色腰带。颜色跟着「颜色」选项变。
 - 入口：点击场景里的自己，或选座弹窗里的「换个样子」。选择保存在本地。
 - 画法在 `app.js` 的 `guestSVG(guest)`，原点是座位面中心、向上绘制；场景和预览共用。
 - **AC**：改任意选项，预览和场景里的形象同时更新；刷新后保持；换座位时形象跟着移动。
@@ -182,7 +189,7 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 ### 5.3 其他
 - `rarity`：`{ label, zh, color }`
 - `seats`：`{ id, name, jp, desc, marker: [x, y] }`（marker 是客人坐下的 SVG 坐标）
-- `guest`：`{ hairStyle[], hairColor[], outfit[], accessory[] }`，每项 `{ id, name, color? }`。新增发型或配饰需要同时在 `guestSVG` 里加画法；只加颜色只改数据。
+- `guest`：`{ hairStyle[], hairColor[], clothing[], outfit[], accessory[] }`，每项 `{ id, name, color? }`。新增发型或配饰需要同时在 `guestSVG` 里加画法；只加颜色只改数据。
 - `hotspots`：`{ [data-id]: { title, hint } }`
 - `chef`：`greetings[]`、`counterExtra[]`、`omakaseIntro`、`legendary`、`afterOrder[]`
 - `omikuji`：`{ result, text, luck: 0–3 }[]`
@@ -203,7 +210,7 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 | `kobune.seat` | 座位 id |
 | `kobune.zukan` | 已收录鱼 id 数组 |
 | `kobune.fresh` | 尚未在图鉴里看过的新收录鱼 id |
-| `kobune.guest` | 客人形象 `{ hairStyle, hairColor, outfit, accessory }` |
+| `kobune.guest` | 客人形象 `{ hairStyle, hairColor, clothing, outfit, accessory }` |
 | `kobune.lang` | 界面语言 `zh` / `en` |
 
 > 新增存档 key 必须写进这张表；**改变已有 key 的格式需要写迁移代码**。
@@ -233,7 +240,7 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 ### 6.1 约束
 - 纯 HTML / CSS / 原生 JS，不引入框架和构建工具；外部资源只用 Google Fonts。
 - 要能直接用 `file://` 打开（所以不用 ES module 的 `import`，用普通 `<script>` 按顺序加载）。
-- 脚本加载顺序：`i18n.js` → `data.js` → `data.en.js` → `app.js`。
+- 脚本加载顺序：`i18n.js` → `data.js` → `data.en.js` → `art.js` → `app.js`。
 
 ### 6.2 文件
 ```
@@ -242,6 +249,7 @@ css/style.css     全部样式（按区块分节：顶栏 / 场景 / 弹窗 / �
 js/i18n.js        界面文案（中 / 英）I18N
 js/data.js        内容数据 SHOP_DATA（中文为源）
 js/data.en.js     内容数据的英文翻译 SHOP_DATA_EN
+js/art.js         食物插画 KOBUNE_ART（刺身、握寿司、军舰、细卷、木屐盘、外带盒；soft / retro 两种画风）
 js/app.js         交互逻辑
 docs/PRD.md       本文档
 CLAUDE.md         给 agent 的入口说明（指向本文；AGENTS.md 内容相同，供其他 agent 工具读取）
@@ -262,8 +270,13 @@ views.<id> = {
 
 **新增一个可互动物体的步骤**：① `index.html` 场景里画 `<g class="hotspot" data-id="xxx">` ② `data.js` 的 `hotspots.xxx` 写提示，`data.en.js` 的 `hotspots.xxx` 写英文 ③ `app.js` 加 `views.xxx`，所有文案用 `t("key")`，key 同时加进 `i18n.js` 的 zh 和 en ④ 需要的样式加到 `style.css` 对应分节。
 
+### 6.3.1 插画约定（art.js）
+- `KOBUNE_ART.sashimi(f, n)`、`nigiri(f)`（`shape` 是 roe / pearl 的鱼会自动画成军舰）、`maki(f)`、`geta(fishList)`、`takeoutBox(fishList)`，每个都返回一段 `<svg class="art …">` 字符串。
+- 描边、米饭颜色、饱和度和颗粒感都从当前画风 `T` 读取，不要在函数里写死颜色；新增食物时两种画风都要验证。
+- `retro` 的颗粒感来自 `index.html` 里的 `#kb-grain` 滤镜。
+
 ### 6.4 公共函数（app.js 内）
-`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`sliceHTML(fish)`、`swatchHTML(fish, n)`、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`chefSVG(look)`、`store.get/set`。
+`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`swatchHTML(fish, n)`（刺身）、`sushiHTML(fish)`（握寿司）、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`chefSVG(look)`、`itemArt(menuItem)`、`store.get/set`。
 语言相关：`t(key, vars)` 取界面文案；`fishName(f)`、`fishText(f, field)`、`itemName(it)`、`itemDesc(it)`、`seatName(s)`、`rarityName(r)`、`chefLine(key, i?)` 取当前语言的内容；`applyLang()` 刷新整页。
 CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: string[], counts? }`。名称和备注不存死，显示时由 `lineName(l)` / `lineNote(l)` 按当前语言生成。
 
@@ -385,6 +398,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | Q7 | 是否需要跨设备云同步？需要的话可以接受引入账号 / 后端吗？ | T-31 | 待定（先做 T-07 存档码） |
 | Q8 | 背景音乐用三味线还是尺八？默认静音还是默认小音量？ | T-22 | 待定（PRD 暂定默认静音） |
 | Q9 | 套餐有哪几种、价格怎么定？ | T-26 | 待定 |
+| Q10 | 食物画风用 `soft`（可爱柔和）还是 `retro`（粗描边复古）？还是让访客自己切换？ | 全局 | 待定（目前默认 soft，`?art=retro` 预览） |
 
 ---
 
@@ -401,7 +415,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 音效 | [効果音ラボ](https://soundeffect-lab.info/) | 免费商用，无需署名；不能二次分发素材本身 |
 | BGM / 音效 | [魔王魂](https://maou.audio/) | 免费商用；按其规约注明出处 |
 | 音效 | [Freesound](https://freesound.org/) | 每个文件授权不同，优先选 CC0；CC-BY 需署名 |
-| 画风参考 | Jacey 提供的いらすとや风格厨师图 | 只作画风参考，不使用原图；所有角色原创自绘 |
+| 画风参考 | Jacey 提供的いらすとや风格厨师图和寿司图，以及一组粗描边复古风食物图 | 只作画风参考，不使用原图；角色和食物全部原创自绘 |
 | 字体 | Google Fonts：Noto Serif SC、Yuji Syuku、Klee One（在用）；Zen Old Mincho、Kaisei Decol（备选） | SIL Open Font License，可商用 |
 | 鱼类资料 | [Wikipedia](https://ja.wikipedia.org/)、[ぼうずコンニャク市場魚貝類図鑑](https://www.zukan-bouz.com/) | 只作参考，**文字必须自己改写**；图片不能直接使用 |
 
@@ -418,5 +432,6 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 2026-10-30 | v0.1 | 第一版可玩原型；PRD 初版 |
 | 2026-10-30 | — | PRD 扩充为完整版：功能规格与验收标准、数据模型、架构约定、多 agent 协作规范、任务清单 |
 | 2026-10-30 | v0.1.1 | 店名改为「小舟」，存档前缀改为 `kobune.`（兼容旧存档）；新增 F-13 客人形象 |
+| 2026-10-30 | v0.1.4 | 寿司 / 刺身按新画风重画（`art.js`）；堂食 / 打包两种用餐方式，打包用外带盒；客人可穿和服 / 浴衣；新增 retro 备选食物画风 |
 | 2026-10-30 | v0.1.3 | 春田师傅按新画风重绘（Q 版、传统板前服）；新增女性厨师形象，供 T-10 玩家当厨师时选择 |
 | 2026-10-30 | v0.1.2 | 新增 F-14 中英双语；PRD 加入存档局限与方案（§5.5）、昼夜 / 季节旬鱼、氛围音、师傅小剧场、套组印章与御朱印卡、套餐与手写小票、素材来源（§11） |

@@ -71,6 +71,7 @@ window.SHOP_DATA_EN = {
   guest: {
     short: "Short", bun: "Bun", ponytail: "Ponytail", long: "Long",
     black: "Black", brown: "Chestnut", gold: "Flaxen", silver: "Silver",
+    casual: "Casual", kimono: "Kimono", yukata: "Yukata",
     ai: "Indigo", shu: "Vermilion", matcha: "Matcha", sakura: "Sakura", kuro: "Ink black",
     none: "None", kanzashi: "Hairpin", hat: "Hat",
   },

@@ -295,47 +295,19 @@ button { font: inherit; cursor: pointer; }
   position: absolute; left: 50%; top: 50%; width: 0; height: 0;
   cursor: pointer;
 }
-.portion-inner { position: absolute; left: -36px; top: -112px; width: 72px; height: 70px; display: flex; justify-content: center; }
-.portion-inner > i { margin: 0 -7px; }
-.portion-inner > i:nth-child(1) { transform: rotate(-14deg); }
-.portion-inner > i:nth-child(3) { transform: rotate(14deg); }
+.portion-inner { position: absolute; left: -36px; top: -112px; width: 72px; height: 70px; display: flex; justify-content: center; align-items: flex-end; }
+.portion-inner .art { width: 70px; height: auto; }
 .portion:hover .portion-inner { filter: brightness(.9) drop-shadow(0 0 4px var(--shu)); }
 .plate-empty { position: absolute; inset: 0; display: grid; place-items: center; color: #a89a7c; font-size: 14px; padding: 80px; }
 .plate-summary { margin: 14px 0 0; font-size: 14px; color: var(--sumi-soft); min-height: 1.5em; }
 
-/* 鱼片形状 */
-.slice {
-  display: inline-block; width: 30px; height: 56px; flex: none;
-  border-radius: 46% 46% 30% 30% / 40% 40% 24% 24%;
-  background: repeating-linear-gradient(118deg, var(--c) 0 7px, var(--c2) 7px 9px, var(--c) 9px 13px);
-  box-shadow: inset -3px -3px 6px rgba(0, 0, 0, .12), 0 2px 3px rgba(0, 0, 0, .15);
-}
-.slice.round {
-  width: 38px; height: 38px; border-radius: 50%; align-self: flex-end;
-  background: radial-gradient(circle at 35% 35%, #fff 0 8%, var(--c) 30%, var(--c2) 100%);
-}
-.slice.shrimp {
-  width: 24px; height: 60px; border-radius: 40% 40% 50% 50% / 20% 20% 80% 80%;
-  background: repeating-linear-gradient(0deg, var(--c) 0 6px, var(--c2) 6px 10px);
-}
-.slice.roe {
-  width: 30px; height: 40px; border-radius: 40%; align-self: flex-end;
-  background:
-    radial-gradient(circle at 30% 30%, var(--c2) 0 18%, transparent 20%),
-    radial-gradient(circle at 70% 60%, var(--c2) 0 18%, transparent 20%),
-    var(--c);
-}
-.slice.pearl {
-  width: 34px; height: 34px; border-radius: 50%; align-self: flex-end;
-  background:
-    radial-gradient(circle at 30% 30%, var(--c2) 0 14%, var(--c) 15% 26%, transparent 27%),
-    radial-gradient(circle at 70% 35%, var(--c2) 0 14%, var(--c) 15% 26%, transparent 27%),
-    radial-gradient(circle at 50% 72%, var(--c2) 0 14%, var(--c) 15% 26%, transparent 27%),
-    radial-gradient(circle at 22% 70%, var(--c2) 0 10%, var(--c) 11% 20%, transparent 21%),
-    radial-gradient(circle at 80% 72%, var(--c2) 0 10%, var(--c) 11% 20%, transparent 21%);
-}
-.swatch { display: flex; align-items: flex-end; height: 60px; }
-.swatch .slice { transform: scale(.85); }
+/* 插画（art.js） */
+.swatch { display: flex; align-items: flex-end; justify-content: center; height: 60px; }
+.swatch .art { height: 100%; width: auto; max-width: 100%; }
+.dish .art { width: 44px; height: auto; }
+.served { margin: 6px auto 4px; }
+.served .art { width: min(320px, 100%); height: auto; }
+.served .art-takeout { width: min(360px, 100%); }
 
 /* 座位 */
 .seat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
@@ -365,6 +337,9 @@ button { font: inherit; cursor: pointer; }
 @keyframes hop-in { from { opacity: 0; } }
 
 /* 订单 */
+.mode-toggle { display: inline-flex; border: 1px solid var(--sumi); border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
+.mode { border: none; background: transparent; color: var(--sumi); padding: 6px 16px; }
+.mode.active { background: var(--sumi); color: var(--washi); }
 .cart-list { list-style: none; padding: 0; margin: 0; }
 .cart-line { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dotted #c8b894; }
 .cart-line small { display: block; color: var(--sumi-soft); font-size: 12px; }
@@ -411,7 +386,9 @@ button { font: inherit; cursor: pointer; }
   background: #fff; border-radius: 10px; display: grid; place-items: center; min-height: 180px;
   border-top: 6px solid var(--rc);
 }
-.detail-visual .swatch { transform: scale(1.8); }
+.detail-visual { display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; padding: 16px 0; }
+.detail-visual .art-nigiri { width: 150px; height: auto; }
+.detail-visual .art-sashimi { width: 110px; height: auto; }
 .detail h3 { font-family: var(--font-brush); font-size: 32px; margin: 0; }
 .names { color: var(--sumi-soft); margin: 2px 0 14px; }
 .facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }

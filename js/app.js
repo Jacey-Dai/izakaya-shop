@@ -3,6 +3,9 @@
 
   const D = window.SHOP_DATA;
   const EN = window.SHOP_DATA_EN || {};
+  const ART = window.KOBUNE_ART;
+  // 食物画风：默认 soft；?art=retro 预览备选画风（待 Jacey 决定，PRD Q10）
+  ART.setTheme(new URLSearchParams(location.search).get("art") === "retro" ? "retro" : "soft");
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const yen = (n) => (n === 0 ? t("free") : "¥" + n.toLocaleString("ja-JP"));
@@ -83,6 +86,7 @@
     guest: { ...defaultGuest(), ...store.get("guest", {}) },
     // 春田师傅默认男性；女性形象留给玩家“当厨师”时选择（T-10），可用 ?chef=female 预览
     chefLook: new URLSearchParams(location.search).get("chef") === "female" ? "female" : D.chefLooks[0].id,
+    orderMode: "dine",
     luck: 0,
     omakase: null,
     menuTab: "sashimi",
@@ -101,38 +105,69 @@
   })();
 
   // ---------- 小组件 ----------
-  const sliceHTML = (f) => `<i class="slice ${f.shape === "slice" ? "" : f.shape}" style="--c:${f.color};--c2:${f.color2}"></i>`;
-  const swatchHTML = (f, n = 1) => `<div class="swatch">${sliceHTML(f).repeat(n)}</div>`;
+  // 插画在 art.js：刺身片、握寿司 / 军舰、细卷、木屐盘、外带盒
+  const swatchHTML = (f, n = 1) => `<div class="swatch">${ART.sashimi(f, n)}</div>`;
+  const sushiHTML = (f) => `<div class="swatch">${ART.nigiri(f)}</div>`;
+  function itemArt(it) {
+    if (!it.fish) return "";
+    const f = fishById[it.fish[0]];
+    if (it.id.startsWith("s-")) return ART.sashimi(f, 2);
+    if (it.id.startsWith("r-")) return ART.maki(f);
+    return ART.nigiri(f);
+  }
   const rarityColor = (r) => D.rarity[r].color;
 
-  // 客人背影，原点在座位面中心，向上画
+  // 客人背影，原点在座位面中心，向上画。画风与师傅一致（柔和描边）
   function guestSVG(g) {
     const opt = (k) => D.guest[k].find((o) => o.id === g[k]) || D.guest[k][0];
+    const line = 'stroke="#7d7068" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"';
     const hair = opt("hairColor").color;
     const cloth = opt("outfit").color;
     const style = g.hairStyle;
     const acc = g.accessory;
+    const wear = opt("clothing").id;
     const back = {
       short: "",
-      bun: `<circle cx="0" cy="-138" r="11" fill="${hair}"/>`,
-      ponytail: `<ellipse cx="0" cy="-80" rx="8" ry="20" fill="${hair}"/><rect x="-5" y="-98" width="10" height="5" rx="2" fill="#c0392b"/>`,
-      long: `<path d="M-23 -112 Q-26 -70 -20 -56 L20 -56 Q26 -70 23 -112 Z" fill="${hair}"/>`,
+      bun: `<circle cx="0" cy="-138" r="11" fill="${hair}" ${line}/>`,
+      ponytail: `<ellipse cx="0" cy="-80" rx="8" ry="20" fill="${hair}" ${line}/><rect x="-5" y="-98" width="10" height="5" rx="2" fill="#c0392b"/>`,
+      long: `<path d="M-23 -112 Q-26 -70 -20 -56 L20 -56 Q26 -70 23 -112 Z" fill="${hair}" ${line}/>`,
     }[style] || "";
     const extra = {
       none: "",
       kanzashi: `<line x1="6" y1="${style === "bun" ? -140 : -126}" x2="24" y2="${style === "bun" ? -150 : -138}" stroke="#d9a520" stroke-width="3" stroke-linecap="round"/><circle cx="25" cy="${style === "bun" ? -151 : -139}" r="4" fill="#c0392b"/>`,
-      hat: `<ellipse cx="0" cy="-122" rx="30" ry="7" fill="#d9c08a" stroke="#a08850"/><path d="M-17 -123 Q-16 -142 0 -142 Q16 -142 17 -123 Z" fill="#d9c08a" stroke="#a08850"/><rect x="-17" y="-128" width="34" height="5" fill="#c0392b"/>`,
+      hat: `<ellipse cx="0" cy="-122" rx="30" ry="7" fill="#d9c08a" ${line}/><path d="M-17 -123 Q-16 -142 0 -142 Q16 -142 17 -123 Z" fill="#d9c08a" ${line}/><rect x="-17" y="-128" width="34" height="5" fill="#c0392b"/>`,
     }[acc] || "";
+
+    const torso = `<path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="${cloth}" ${line}/>`;
+    let outfit;
+    if (wear === "kimono" || wear === "yukata") {
+      const kimono = wear === "kimono";
+      const obi = kimono ? "#d9a520" : "#c0392b";
+      // 和服：宽袖、白色后领、宽腰带和背后的结；浴衣：窄一些的袖子、白色小花纹、红色腰带
+      const sleeve = kimono ? 46 : 40;
+      const pattern = kimono
+        ? `<g fill="rgba(255,255,255,.35)"><circle cx="-16" cy="-12" r="4"/><circle cx="14" cy="-60" r="4"/><circle cx="18" cy="-14" r="3"/><circle cx="-20" cy="-62" r="3"/></g>`
+        : `<g stroke="rgba(255,255,255,.7)" stroke-width="2" fill="none"><circle cx="-14" cy="-14" r="5"/><circle cx="12" cy="-62" r="5"/><circle cx="16" cy="-10" r="4"/><circle cx="-18" cy="-64" r="4"/><circle cx="-2" cy="-20" r="3"/></g>`;
+      outfit = `
+        <path d="M-24 -76 L-${sleeve} -68 L-${sleeve} -18 Q-${sleeve} -12 -${sleeve - 6} -12 L-26 -14 Z" fill="${cloth}" ${line}/>
+        <path d="M24 -76 L${sleeve} -68 L${sleeve} -18 Q${sleeve} -12 ${sleeve - 6} -12 L26 -14 Z" fill="${cloth}" ${line}/>
+        ${torso}
+        ${pattern}
+        <path d="M-13 -86 Q0 -78 13 -86" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+        <rect x="-31" y="-48" width="62" height="${kimono ? 18 : 12}" fill="${obi}" ${line}/>
+        <path d="M-2 -46 L-22 -${kimono ? 58 : 54} L-22 -${kimono ? 22 : 30} Z M2 -46 L22 -${kimono ? 58 : 54} L22 -${kimono ? 22 : 30} Z" fill="${obi}" ${line}/>
+        <rect x="-7" y="-50" width="14" height="${kimono ? 16 : 12}" rx="3" fill="${obi}" ${line}/>`;
+    } else {
+      outfit = `${torso}<path d="M-12 -84 Q0 -76 12 -84" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>`;
+    }
     return `
       <ellipse cx="0" cy="2" rx="30" ry="6" fill="rgba(0,0,0,.18)"/>
-      <path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="${cloth}"/>
-      <path d="M-12 -84 L0 -70 L12 -84" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>
-      <rect x="-31" y="-34" width="62" height="10" fill="rgba(0,0,0,.25)"/>
-      <rect x="-6" y="-94" width="12" height="12" fill="#f1c7a0"/>
-      <circle cx="-22" cy="-108" r="5" fill="#f1c7a0"/>
-      <circle cx="22" cy="-108" r="5" fill="#f1c7a0"/>
+      ${outfit}
+      <rect x="-6" y="-94" width="12" height="12" fill="#fbd9bf"/>
+      <circle cx="-22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
+      <circle cx="22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
       ${style === "long" ? back : ""}
-      <circle cx="0" cy="-112" r="23" fill="${hair}"/>
+      <circle cx="0" cy="-112" r="23" fill="${hair}" ${line}/>
       ${style === "long" ? "" : back}
       ${extra}`;
   }
@@ -377,7 +412,7 @@
             const got = it.fish && it.fish.every((id) => state.collected.has(id));
             return `
               <li class="menu-item">
-                <div class="dish">${f ? swatchHTML(f) : ""}</div>
+                <div class="dish">${itemArt(it)}</div>
                 <div class="name"><b>${itemName(it)}${got ? `<span class="got">${t("menu.got")}</span>` : ""}</b><span>${it.jp}${itemDesc(it) ? " · " + itemDesc(it) : ""}</span></div>
                 <span class="price">${yen(it.price)}</span>
                 <button class="btn add" data-add="${it.id}">${t("menu.order")}</button>
@@ -493,7 +528,7 @@
       const f = fishById[id];
       const angle = (360 / n) * i;
       return `<div class="portion" ${removable ? `data-remove="${i}" title="${t("case.remove", { name: fishName(f) })}"` : ""} style="transform: rotate(${angle}deg)">
-        <div class="portion-inner">${sliceHTML(f).repeat(3)}</div></div>`;
+        <div class="portion-inner">${ART.sashimi(f, 3)}</div></div>`;
     }).join("");
   }
 
@@ -634,7 +669,10 @@
       }
       return `
         <h2>ご注文</h2>
-        <p class="sub">${t("cart.seat", { name: seat ? seatName(seat) : t("cart.seatNone") })}</p>
+        <div class="mode-toggle" role="radiogroup" aria-label="${t("cart.mode")}">
+          ${["dine", "takeout"].map((m) => `<button class="mode ${state.orderMode === m ? "active" : ""}" data-mode="${m}" role="radio" aria-checked="${state.orderMode === m}">${t("cart." + m)}</button>`).join("")}
+        </div>
+        <p class="sub">${state.orderMode === "takeout" ? t("cart.takeoutNote") : t("cart.seat", { name: seat ? seatName(seat) : t("cart.seatNone") })}</p>
         <ul class="cart-list">
           ${state.cart.map((l, i) => `
             <li class="cart-line">
@@ -659,13 +697,17 @@
         if (l.qty <= 0) state.cart.splice(b.dataset.dec, 1);
         updateHud(); rerender();
       }));
+      $$("[data-mode]", body).forEach((b) => b.addEventListener("click", () => {
+        state.orderMode = b.dataset.mode; rerender();
+      }));
       const submit = $("#cart-submit", body);
       if (submit) submit.addEventListener("click", submitOrder);
     },
   };
 
   function submitOrder() {
-    if (!state.seat) {
+    const mode = state.orderMode;
+    if (mode === "dine" && !state.seat) {
       toast(t("toast.pickSeat"));
       open("seats", "cart");
       return;
@@ -678,18 +720,23 @@
     store.set("fresh", [...state.fresh]);
     state.cart = [];
     updateHud();
-    open("receipt", lines, fresh);
+    open("receipt", lines, fresh, mode);
     fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
   }
 
   views.receipt = {
     cls: "book",
-    render: (lines, fresh) => {
+    render: (lines, fresh, mode = "dine") => {
       const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
+      // 这次点到的鱼：堂食摆在木屐盘上，打包装进外带盒
+      const served = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
+      const takeout = mode === "takeout";
+      const art = takeout ? ART.takeoutBox(served) : served.length ? ART.geta(served) : "";
       return `
         <div class="receipt">
-          <div class="stamp">注文承り</div>
-          <h2>${pick(chefLine("afterOrder"))}</h2>
+          <div class="stamp">${takeout ? "お持ち帰り" : "注文承り"}</div>
+          <h2>${takeout ? t("receipt.takeout") : pick(chefLine("afterOrder"))}</h2>
+          ${art ? `<div class="served">${art}</div>` : ""}
           <p class="sub">${t("receipt.summary", { n: lines.length })} <span class="price">${yen(total)}</span></p>
           ${fresh.length ? `
             <p>${t("receipt.new", { n: fresh.length })}</p>
@@ -712,7 +759,7 @@
       return `
         <div class="card locked" style="--rc:${r.color}">
           <span class="no">No.${no}</span><span class="rar">${r.label}</span>
-          ${swatchHTML(f, 2)}
+          ${sushiHTML(f)}
           <b>？？？</b>
           <span>${f.omakaseOnly ? t("card.omakaseOnly") : t("card.notYet")}</span>
         </div>`;
@@ -720,7 +767,7 @@
     return `
       <button class="card ${isNew ? "new" : ""}" data-fish="${f.id}" style="--rc:${r.color}">
         <span class="no">No.${no}</span><span class="rar">${r.label}</span>
-        ${swatchHTML(f, 2)}
+        ${sushiHTML(f)}
         <b>${fishName(f)}</b>
         <span>${f.jp}</span>
       </button>`;
@@ -762,7 +809,7 @@
       const r = D.rarity[f.rarity];
       return `
         <div class="detail">
-          <div class="detail-visual" style="--rc:${r.color}">${swatchHTML(f, 3)}</div>
+          <div class="detail-visual" style="--rc:${r.color}">${ART.nigiri(f)}${ART.sashimi(f, 3)}</div>
           <div>
             <h3>${fishName(f)}</h3>
             <p class="names">${f.jp} · ${f.kanji} · <i>${f.romaji}</i><br>${isEn() ? f.name : f.en}</p>

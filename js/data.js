@@ -127,6 +127,11 @@ window.SHOP_DATA = {
       { id: "gold", name: "亚麻金", color: "#c9a25a" },
       { id: "silver", name: "银灰", color: "#a9a9b0" },
     ],
+    clothing: [
+      { id: "casual", name: "便服" },
+      { id: "kimono", name: "和服" },
+      { id: "yukata", name: "浴衣" },
+    ],
     outfit: [
       { id: "ai", name: "靛蓝", color: "#2c3e60" },
       { id: "shu", name: "朱红", color: "#b23a2e" },
