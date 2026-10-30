@@ -349,6 +349,8 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 
 | T-44 | 修复部署后新 HTML 混用旧 CSS / JS 缓存；资源版本号与热点透明兜底 | 进行中（@Codex，修复已实现，待 PR 合并） | T-43 | index.html、tests/、PRD | 热点无黑块；CSS / JS 使用新 URL；旧样式缺失时点击层仍透明 |
 
+| T-45 | 选择和室座敷后切换到独立完整榻榻米视角，吧台与座敷双向切换；保留点餐和存档 | 进行中（@Codex/feat/T-45-tatami-scene） | Jacey 2026-10-30 授权 | assets/、index.html、app.js、css/、i18n.js、tests/ | 座敷全景；选座与刷新同步镜头；热点、双语、手机、减少动态效果可用 |
+
 ### v0.2 协作基础与打磨
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
