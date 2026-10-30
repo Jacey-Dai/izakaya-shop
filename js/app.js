@@ -4,8 +4,6 @@
   const D = window.SHOP_DATA;
   const EN = window.SHOP_DATA_EN || {};
   const ART = window.KOBUNE_ART;
-  // 食物画风：默认 soft；?art=retro 预览备选画风（待 Jacey 决定，PRD Q10）
-  ART.setTheme(new URLSearchParams(location.search).get("art") === "retro" ? "retro" : "soft");
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const yen = (n) => (n === 0 ? t("free") : "¥" + n.toLocaleString("ja-JP"));
@@ -120,7 +118,7 @@
   // 客人背影，原点在座位面中心，向上画。画风与师傅一致（柔和描边）
   function guestSVG(g) {
     const opt = (k) => D.guest[k].find((o) => o.id === g[k]) || D.guest[k][0];
-    const line = 'stroke="#7d7068" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"';
+    const line = `stroke="${ART.OUTLINE}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"`;
     const hair = opt("hairColor").color;
     const cloth = opt("outfit").color;
     const style = g.hairStyle;
@@ -174,7 +172,7 @@
 
   // 春田师傅（Q 版、柔和描边）。原点在吧台台面中心，向上画；台面以下会被吧台挡住
   function chefSVG(look = "male") {
-    const line = 'stroke="#7d7068" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+    const line = `stroke="${ART.OUTLINE}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
     const skin = "#fbd9bf";
     const hair = look === "female" ? "#4a2f22" : "#33261f";
     const backHair = look === "female"
@@ -204,9 +202,9 @@
       <circle cx="0" cy="-12" r="9" fill="none" stroke="#fff" stroke-width="2.5"/>
       <text x="0" y="-8" text-anchor="middle" font-size="11" fill="#fff" font-family="serif">舟</text>
       <!-- 手臂和端着的木屐盘 -->
-      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="#7d7068" stroke-width="22" stroke-linecap="round"/>
+      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="${ART.OUTLINE}" stroke-width="22" stroke-linecap="round"/>
       <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
-      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="#7d7068" stroke-width="22" stroke-linecap="round"/>
+      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="${ART.OUTLINE}" stroke-width="22" stroke-linecap="round"/>
       <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
       <g class="chef-geta">
         <rect x="-62" y="-26" width="124" height="12" rx="3" fill="#c8915a" ${line}/>

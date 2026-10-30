@@ -1,26 +1,19 @@
 /*
  * 小舟 · 寿司与刺身插画
- * 画风：柔和的灰褐色描边、平涂颜色、白色高光（参考 PRD §1.1.1 的画风说明，全部原创自绘）。
- * 这里只放“画图”的纯函数，不读写状态。参数 f 是 SHOP_DATA.fish 里的一条鱼。
- *
- * 两种画风（PRD §1.1.1）：
- *   soft  默认，可爱柔和
- *   retro 粗黑描边、低饱和、印刷颗粒感（备选，网址加 ?art=retro 预览）
+ * 画风（PRD §1.1.1，Jacey 2026-10-30 定为一种）：温馨、可爱、萌。
+ * 取两份参考的中间：可爱风的圆润造型和高光 + 复古风稍粗的暖棕描边、略微柔和的配色和很淡的纸张颗粒。
+ * 全部原创自绘。这里只放“画图”的纯函数，不读写状态。参数 f 是 SHOP_DATA.fish 里的一条鱼。
  */
 window.KOBUNE_ART = (() => {
-  const THEMES = {
-    soft: { ol: "#8a7d72", w: 2.5, rice: "#fffdf6", riceOl: "#b8aea3", grain: "#d9d1c5", mute: 0, filter: false },
-    retro: { ol: "#2b2622", w: 4, rice: "#efe4cc", riceOl: "#2b2622", grain: "#2b2622", mute: 0.28, filter: true },
-  };
-  let T = THEMES.soft;
-  const setTheme = (name) => { T = THEMES[name] || THEMES.soft; };
+  // 统一的画风参数；厨师和客人（app.js）也用同一个描边色
+  const T = { ol: "#6b5446", w: 3, rice: "#fffaf0", riceOl: "#a8968a", grain: "#e0d5c6", mute: 0.08, filter: true };
 
   const OL = () => `stroke="${T.ol}" stroke-width="${T.w}" stroke-linejoin="round" stroke-linecap="round"`;
   const RICE_OL = () => `stroke="${T.riceOl}" stroke-width="${T.w}" stroke-linejoin="round"`;
   const HI = 'stroke="#fff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".75"';
   const NORI = "#1f2a22";
 
-  // retro 画风下把颜色往暖灰色方向拉，降低饱和度
+  // 颜色轻轻往暖色方向拉一点，显得更温馨
   function col(hex) {
     if (!T.mute) return hex;
     const n = parseInt(hex.slice(1), 16);
@@ -169,5 +162,5 @@ window.KOBUNE_ART = (() => {
       <text x="181" y="111" text-anchor="middle" font-size="12" fill="#fff" font-family="serif" transform="rotate(-8 181 106)">小舟</text>`, "art art-takeout");
   }
 
-  return { sashimi, nigiri, maki, geta, takeoutBox, slicePiece, setTheme };
+  return { sashimi, nigiri, maki, geta, takeoutBox, slicePiece, OUTLINE: T.ol };
 })();
