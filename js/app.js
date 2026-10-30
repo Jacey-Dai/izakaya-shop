@@ -81,6 +81,8 @@
     collected: new Set(store.get("zukan", [])),
     fresh: new Set(store.get("fresh", [])),
     guest: { ...defaultGuest(), ...store.get("guest", {}) },
+    // 春田师傅默认男性；女性形象留给玩家“当厨师”时选择（T-10），可用 ?chef=female 预览
+    chefLook: new URLSearchParams(location.search).get("chef") === "female" ? "female" : D.chefLooks[0].id,
     luck: 0,
     omakase: null,
     menuTab: "sashimi",
@@ -133,6 +135,69 @@
       <circle cx="0" cy="-112" r="23" fill="${hair}"/>
       ${style === "long" ? "" : back}
       ${extra}`;
+  }
+
+  // 春田师傅（Q 版、柔和描边）。原点在吧台台面中心，向上画；台面以下会被吧台挡住
+  function chefSVG(look = "male") {
+    const line = 'stroke="#7d7068" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+    const skin = "#fbd9bf";
+    const hair = look === "female" ? "#4a2f22" : "#33261f";
+    const backHair = look === "female"
+      ? `<path d="M-52 -98 Q-58 -172 0 -174 Q58 -172 52 -98 Q48 -86 38 -94 L36 -126 L-36 -126 L-38 -94 Q-48 -86 -52 -98 Z" fill="${hair}" ${line}/>`
+      : "";
+    const head = look === "female"
+      ? `<path d="M-42 -126 Q-30 -152 0 -148 Q30 -152 42 -126 Q22 -136 8 -130 Q0 -138 -8 -130 Q-22 -136 -42 -126 Z" fill="${hair}" ${line}/>
+         <path d="M-48 -134 Q-30 -186 0 -186 Q30 -186 48 -134 Q0 -150 -48 -134 Z" fill="#2c3e60" ${line}/>
+         <g fill="#fff"><circle cx="-24" cy="-156" r="3"/><circle cx="0" cy="-170" r="3"/><circle cx="22" cy="-158" r="3"/><circle cx="-8" cy="-148" r="2.5"/><circle cx="12" cy="-146" r="2.5"/></g>
+         <path d="M44 -138 l14 -4 l-4 12 z" fill="#2c3e60" ${line}/>`
+      : `<path d="M-44 -126 Q-44 -172 0 -172 Q44 -172 44 -126 Q24 -144 0 -142 Q-24 -144 -44 -126 Z" fill="${hair}" ${line}/>
+         <path d="M-47 -136 Q0 -156 47 -136 L46 -124 Q0 -143 -46 -124 Z" fill="#fff" ${line}/>
+         <g stroke="#2c3e60" stroke-width="4" stroke-linecap="round"><line x1="-36" y1="-138" x2="-30" y2="-128"/><line x1="-18" y1="-143" x2="-12" y2="-133"/><line x1="0" y1="-145" x2="6" y2="-135"/><line x1="18" y1="-143" x2="24" y2="-133"/><line x1="34" y1="-139" x2="40" y2="-129"/></g>
+         <path d="M44 -134 q12 -10 16 -2 q-4 8 -16 4 z M46 -128 q10 4 8 14" fill="#fff" ${line}/>`;
+    const brows = look === "female"
+      ? `<path d="M-24 -132 q6 -3 12 0 M12 -132 q6 -3 12 0" stroke="#4a2f22" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M-26 -132 q7 -4 14 0 M12 -132 q7 -4 14 0" stroke="#33261f" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    const lashes = look === "female"
+      ? `<path d="M-23 -118 l-4 -3 M23 -118 l4 -3" stroke="#5a4a40" stroke-width="2" stroke-linecap="round"/>`
+      : "";
+    const collar = look === "female" ? "#c0392b" : "#2c3e60";
+    return `
+      <!-- 身体：白色板前服（和服式交领），靛蓝前挂 -->
+      <path d="M-46 30 L-42 -52 Q-40 -76 -16 -80 L16 -80 Q40 -76 42 -52 L46 30 Z" fill="#fff" ${line}/>
+      <path d="M-16 -80 L10 -40 M16 -80 L-2 -60" fill="none" stroke="${collar}" stroke-width="5" stroke-linecap="round"/>
+      <path d="M-34 -30 L34 -30 L36 30 L-36 30 Z" fill="#2c3e60" ${line}/>
+      <circle cx="0" cy="-12" r="9" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <text x="0" y="-8" text-anchor="middle" font-size="11" fill="#fff" font-family="serif">舟</text>
+      <!-- 手臂和端着的木屐盘 -->
+      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="#7d7068" stroke-width="22" stroke-linecap="round"/>
+      <path d="M-38 -66 Q-58 -46 -52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
+      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="#7d7068" stroke-width="22" stroke-linecap="round"/>
+      <path d="M38 -66 Q58 -46 52 -26" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
+      <g class="chef-geta">
+        <rect x="-62" y="-26" width="124" height="12" rx="3" fill="#c8915a" ${line}/>
+        <ellipse cx="-34" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
+        <path d="M-50 -36 Q-34 -46 -18 -36 Q-34 -32 -50 -36 Z" fill="#f28a36" ${line}/>
+        <ellipse cx="0" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
+        <path d="M-16 -36 Q0 -46 16 -36 Q0 -32 -16 -36 Z" fill="#b3202f" ${line}/>
+        <ellipse cx="34" cy="-32" rx="15" ry="7" fill="#fffdf6" ${line}/>
+        <rect x="20" y="-44" width="28" height="9" rx="3" fill="#f3d04a" ${line}/>
+        <rect x="32" y="-44" width="4" height="16" fill="#2b3a2a"/>
+        <circle cx="-54" cy="-20" r="9" fill="${skin}" ${line}/>
+        <circle cx="54" cy="-20" r="9" fill="${skin}" ${line}/>
+      </g>
+      <!-- 头 -->
+      ${backHair}
+      <circle cx="-45" cy="-114" r="9" fill="${skin}" ${line}/>
+      <circle cx="45" cy="-114" r="9" fill="${skin}" ${line}/>
+      <circle cx="0" cy="-118" r="45" fill="${skin}" ${line}/>
+      ${head}
+      ${brows}
+      <path d="M-24 -116 q6 -8 12 0 M12 -116 q6 -8 12 0" stroke="#5a4a40" stroke-width="3" fill="none" stroke-linecap="round"/>
+      ${lashes}
+      <ellipse cx="-28" cy="-100" rx="9" ry="6" fill="#f5a3a0" opacity=".75"/>
+      <ellipse cx="28" cy="-100" rx="9" ry="6" fill="#f5a3a0" opacity=".75"/>
+      <path d="M-2 -108 q4 2 0 5" stroke="#d99a80" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M-8 -96 q8 8 16 0" stroke="#b5563f" stroke-width="3" fill="${look === "female" ? "#e8786e" : "none"}" stroke-linecap="round"/>`;
   }
 
   function toast(msg, gold = false) {
@@ -329,17 +394,10 @@
   };
 
   // 师傅
-  const chefPortrait = `
-    <svg viewBox="560 200 160 160" class="chef-portrait" aria-hidden="true">
-      <rect x="560" y="200" width="160" height="160" fill="#e9dcc0"/>
-      <path d="M582 380 Q586 302 640 292 Q694 302 698 380 Z" fill="#fbfbf8" stroke="#c9c4b8" stroke-width="2"/>
-      <rect x="630" y="270" width="20" height="26" fill="#f1c7a0"/>
-      <circle cx="640" cy="248" r="30" fill="#f1c7a0"/>
-      <path d="M610 248 Q610 214 640 214 Q670 214 670 248 Q656 234 640 234 Q624 234 610 248Z" fill="#2b2b2b"/>
-      <rect x="609" y="228" width="62" height="10" rx="3" fill="#2c3e60"/>
-      <path d="M625 252 q5 -5 10 0 M645 252 q5 -5 10 0" stroke="#2b2b2b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <circle cx="622" cy="262" r="5" fill="#f3a6a0" opacity=".7"/><circle cx="658" cy="262" r="5" fill="#f3a6a0" opacity=".7"/>
-      <path d="M633 265 q7 6 14 0" stroke="#7a3b2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  const chefPortrait = () => `
+    <svg viewBox="-75 -195 150 150" class="chef-portrait" aria-hidden="true">
+      <rect x="-75" y="-195" width="150" height="150" fill="#e9dcc0"/>
+      ${chefSVG(state.chefLook)}
     </svg>`;
 
   function rollOmakase() {
@@ -387,7 +445,7 @@
 
       return `
         <div class="chef-wrap">
-          ${chefPortrait}
+          ${chefPortrait()}
           <div>
             <h2>${t("shop.chef")}</h2>
             <p class="sub">${D.shop.chefJp} · ${t("chef.title")}${atCounter ? " · " + t("chef.atCounter") : ""}</p>
@@ -809,6 +867,7 @@
   const syncHudHeight = () => document.documentElement.style.setProperty("--hud-h", $(".hud").offsetHeight + "px");
   window.addEventListener("resize", syncHudHeight);
 
+  $("#chef-figure").innerHTML = chefSVG(state.chefLook);
   applyLang();
   syncHudHeight();
 })();

@@ -75,6 +75,8 @@ window.SHOP_DATA_EN = {
     none: "None", kanzashi: "Hairpin", hat: "Hat",
   },
 
+  chefLooks: { male: "Male", female: "Female" },
+
   hotspots: {
     noren: { title: "Noren curtain", hint: "About the shop and how to play" },
     board: { title: "Sign · Today's picks", hint: "See today's fresh catch" },

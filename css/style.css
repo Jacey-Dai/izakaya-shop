@@ -107,8 +107,8 @@ button { font: inherit; cursor: pointer; }
 
 .chef-idle { animation: breathe 3.2s ease-in-out infinite; }
 @keyframes breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-.hotspot[data-id="chef"]:hover .knife { animation: chop .5s ease-in-out infinite; transform-origin: 716px 370px; }
-@keyframes chop { 50% { transform: rotate(-14deg); } }
+.hotspot[data-id="chef"]:hover .chef-geta { animation: offer .8s ease-in-out infinite; }
+@keyframes offer { 50% { transform: translateY(-4px); } }
 
 .neko-paw { transform-origin: 900px 346px; animation: beckon 1.6s ease-in-out infinite; }
 @keyframes beckon { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-25deg); } }

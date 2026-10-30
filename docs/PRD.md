@@ -9,7 +9,7 @@
 | 产品负责人 | Jacey（所有产品决策由 Jacey 拍板） |
 | 仓库 | https://github.com/Jacey-Dai/izakaya-shop |
 | 线上地址 | https://jacey-dai.github.io/izakaya-shop/ （需在仓库 Settings → Pages 开启） |
-| 当前版本 | v0.1.2（可玩原型 + 客人形象 + 中英双语） |
+| 当前版本 | v0.1.3（可玩原型 + 客人形象 + 中英双语 + 新版师傅） |
 | 文档更新 | 2026-10-30 |
 
 ---
@@ -22,7 +22,8 @@
 
 ### 1.1.1 命名
 - **店名**：小舟（こぶね · Kobune Sushi）。寿司店常用船形器皿（舟盛り）盛刺身，名字小巧、有画面感。暖帘写「小 舟 鮨」，招牌标志为「舟」。
-- **师傅**：春田师傅（春田さん）。
+- **师傅**：春田师傅（春田さん），默认男性。
+- **厨师画风**（Jacey 2026-10-30 定）：Q 版大头、圆脸、闭眼笑、腮红、柔和的灰褐色描边、平涂颜色，可爱亲切。必须穿能体现日料师傅身份的传统服装：白色板前服（和服式交领）、靛蓝前挂（围裙）、头上戴扭结鉢巻或三角巾。参考图只用来定画风，角色全部原创自绘（SVG），不直接使用任何素材站的图片。
 - **客人**：访客自己，形象可自定义（F-13）。
 
 ### 1.2 目标
@@ -107,6 +108,8 @@
 - 可以“换一换”重抽，或“就要这盘”加入订单。
 - **AC**：`omakaseOnly` 的鱼只能从这里获得；抽签运气越好，越容易出高稀有度。
 
+**师傅形象**：由 `app.js` 的 `chefSVG(look)` 绘制，场景和对话头像共用。`look` 为 `male`（白底靛蓝条纹的扭结鉢巻、短黑发）或 `female`（靛蓝白点三角巾、及肩发、朱红领口）。春田师傅固定 `male`；`female` 留给玩家当厨师时选择（T-10），目前可用网址参数 `?chef=female` 预览。悬停时师傅端着的寿司木屐盘会轻轻上下晃动。
+
 ### F-08 鱼柜 · 自选鱼生
 - 左侧鱼柜列出所有非隐藏鱼；点一次往盘子里放一份（三切）。最多 6 份。
 - 盘子是圆盘，份数均匀环绕排列，中间有萝卜丝、紫苏、山葵；点盘中的鱼可拿掉。
@@ -183,6 +186,7 @@ MenuItem：`{ id, name, jp, price, desc?, fish?: string[], bottle?: hex }`。
 - `hotspots`：`{ [data-id]: { title, hint } }`
 - `chef`：`greetings[]`、`counterExtra[]`、`omakaseIntro`、`legendary`、`afterOrder[]`
 - `omikuji`：`{ result, text, luck: 0–3 }[]`
+- `chefLooks`：`{ id, name }[]`，第一项为默认（`male`）。英文在 `data.en.js` 的 `chefLooks`。
 
 ### 5.3.1 翻译数据
 - **界面文案**：`js/i18n.js` 的 `window.I18N = { zh: {...}, en: {...} }`，扁平 key（如 `"cart.submit"`），支持 `{name}` 占位符。两种语言的 key 必须一一对应。
@@ -259,7 +263,7 @@ views.<id> = {
 **新增一个可互动物体的步骤**：① `index.html` 场景里画 `<g class="hotspot" data-id="xxx">` ② `data.js` 的 `hotspots.xxx` 写提示，`data.en.js` 的 `hotspots.xxx` 写英文 ③ `app.js` 加 `views.xxx`，所有文案用 `t("key")`，key 同时加进 `i18n.js` 的 zh 和 en ④ 需要的样式加到 `style.css` 对应分节。
 
 ### 6.4 公共函数（app.js 内）
-`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`sliceHTML(fish)`、`swatchHTML(fish, n)`、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`store.get/set`。
+`addToCart(line)`、`addMenuItem(id)`、`toast(msg, gold)`、`updateHud()`、`sliceHTML(fish)`、`swatchHTML(fish, n)`、`plateInnerHTML(fishIds, removable)`、`cardHTML(fish, isNew)`、`guestSVG(guest)`、`chefSVG(look)`、`store.get/set`。
 语言相关：`t(key, vars)` 取界面文案；`fishName(f)`、`fishText(f, field)`、`itemName(it)`、`itemDesc(it)`、`seatName(s)`、`rarityName(r)`、`chefLine(key, i?)` 取当前语言的内容；`applyLang()` 刷新整页。
 CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: string[], counts? }`。名称和备注不存死，显示时由 `lineName(l)` / `lineNote(l)` 按当前语言生成。
 
@@ -334,7 +338,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 ### v0.3 摆盘与角色玩法（Jacey 提出，**暂不执行**，等 §10 决策）
 | 编号 | 任务 | 状态 | 依赖 | 主要文件 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
-| T-10 | 角色选择：选鱼生时选择“当 chef”或“当客人” | 待决策 | T-01、Q1 | `views/fishcase` | 两种角色入口清晰，可随时切换 |
+| T-10 | 角色选择：选鱼生时选择“当 chef”或“当客人”。当 chef 时玩家可选厨师性别（男 / 女，用 `chefSVG` 的两种形象，默认男性），不选就是男性 | 待决策 | T-01、Q1 | `views/fishcase`、`chefLooks` | 两种角色入口清晰，可随时切换；性别选择保存到本地 |
 | T-11 | 当 chef · 自行摆盘：鱼片可拖到盘中任意位置、旋转、层叠 | 待决策 | T-10 | 新视图 `plating` | 鼠标和触控都能拖；摆好的位置随订单保存 |
 | T-12 | 当 chef · 重新摆盘 / 上菜：清空、打乱重摆；完成后“上菜”给客人，客人有反馈 | 待决策 | T-11、Q2 | `plating`、`receipt` | 上菜后进入下单流程，图鉴照常收录 |
 | T-13 | 当客人 · 被上菜：师傅摆盘并端上来（复用 T-05 动画） | 待决策 | T-05、T-10 | `fishcase`、`receipt` | 与当前流程一致，多一段上菜表现 |
@@ -397,6 +401,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 音效 | [効果音ラボ](https://soundeffect-lab.info/) | 免费商用，无需署名；不能二次分发素材本身 |
 | BGM / 音效 | [魔王魂](https://maou.audio/) | 免费商用；按其规约注明出处 |
 | 音效 | [Freesound](https://freesound.org/) | 每个文件授权不同，优先选 CC0；CC-BY 需署名 |
+| 画风参考 | Jacey 提供的いらすとや风格厨师图 | 只作画风参考，不使用原图；所有角色原创自绘 |
 | 字体 | Google Fonts：Noto Serif SC、Yuji Syuku、Klee One（在用）；Zen Old Mincho、Kaisei Decol（备选） | SIL Open Font License，可商用 |
 | 鱼类资料 | [Wikipedia](https://ja.wikipedia.org/)、[ぼうずコンニャク市場魚貝類図鑑](https://www.zukan-bouz.com/) | 只作参考，**文字必须自己改写**；图片不能直接使用 |
 
@@ -413,4 +418,5 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 2026-10-30 | v0.1 | 第一版可玩原型；PRD 初版 |
 | 2026-10-30 | — | PRD 扩充为完整版：功能规格与验收标准、数据模型、架构约定、多 agent 协作规范、任务清单 |
 | 2026-10-30 | v0.1.1 | 店名改为「小舟」，存档前缀改为 `kobune.`（兼容旧存档）；新增 F-13 客人形象 |
+| 2026-10-30 | v0.1.3 | 春田师傅按新画风重绘（Q 版、传统板前服）；新增女性厨师形象，供 T-10 玩家当厨师时选择 |
 | 2026-10-30 | v0.1.2 | 新增 F-14 中英双语；PRD 加入存档局限与方案（§5.5）、昼夜 / 季节旬鱼、氛围音、师傅小剧场、套组印章与御朱印卡、套餐与手写小票、素材来源（§11） |

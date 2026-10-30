@@ -156,6 +156,13 @@ window.SHOP_DATA = {
     neko: { title: "招财猫 · 招き猫", hint: "摸一摸，抽一支签" },
   },
 
+  // 厨师形象。春田师傅默认男性；以后玩家“当厨师”（PRD T-10）时可以选男 / 女。
+  // 调试预览：在网址后加 ?chef=female
+  chefLooks: [
+    { id: "male", name: "男" },
+    { id: "female", name: "女" },
+  ],
+
   chef: {
     greetings: [
       "いらっしゃい！今天的鱼都很精神哦。",
