@@ -27,6 +27,23 @@ const root = path.resolve(__dirname, '..');
       for (const src of ['assets/art/izakaya-room.webp', 'assets/art/haruta.webp']) { const im = new Image(); im.src = src; await im.decode(); if (!im.naturalWidth) return false; }
       return true;
     }), true);
+    // Deployment regression: a returning browser must request versioned CSS/JS.
+    const assetUrls = await page.locator('link[href^="css/"], script[src^="js/"]').evaluateAll(nodes => nodes.map(e => e.getAttribute('href') || e.getAttribute('src')));
+    assert.equal(assetUrls.length, 6);
+    assert.ok(assetUrls.every(url => new URL(url, 'https://example.test/').searchParams.get('v')));
+    assert.equal(new Set(assetUrls.map(url => new URL(url, 'https://example.test/').searchParams.get('v'))).size, 1);
+    // Missing/old CSS must not turn SVG interaction regions into opaque black art.
+    const fallback = await page.evaluate(() => {
+      const link = document.querySelector('link[href^="css/"]');
+      link.sheet.disabled = true;
+      const transparent = value => value === 'transparent' || value === 'rgba(0, 0, 0, 0)';
+      const areas = [...document.querySelectorAll('.hit-area')];
+      const safe = areas.length === 11 && areas.every(e => transparent(getComputedStyle(e).fill) && transparent(getComputedStyle(e).stroke));
+      const dotsHidden = [...document.querySelectorAll('.hotspot-dot')].every(e => getComputedStyle(e).opacity === '0');
+      link.sheet.disabled = false;
+      return safe && dotsHidden;
+    });
+    assert.equal(fallback, true);
     await shot('desktop');
     // All object entry points remain interactive, localized, and escapable.
     for (const lang of ['en', 'zh']) {
