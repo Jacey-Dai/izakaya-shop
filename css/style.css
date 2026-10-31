@@ -461,6 +461,27 @@ button { font: inherit; cursor: pointer; }
 @keyframes chef-breathe { 50% { transform: translateY(-2px) rotate(.35deg); } }
 .steam { opacity: .5; animation: steam-rise 5s ease-out infinite; }
 @keyframes steam-rise { 0% { opacity: 0; transform: translateY(7px); } 35% { opacity: .45; } 100% { opacity: 0; transform: translateY(-16px); } }
+/* 人物动作（T-48）：对整张人物图做关键帧，原点分别在吧台中心和客人座面 */
+.chef-act { transform-origin: 628px 450px; }
+.chef-act.act-bow { animation: chef-bow 1s ease-in-out; }
+.chef-act.act-slice { animation: chef-slice .7s linear; }
+.chef-act.act-nigiri { animation: chef-nigiri .7s ease-in-out; }
+.chef-act.act-serve { animation: chef-serve .9s ease-in-out; }
+@keyframes chef-bow { 35%, 65% { transform: translateY(16px) scaleY(.95); } }
+@keyframes chef-slice { 20%, 60% { transform: rotate(-2deg); } 40%, 80% { transform: translateY(2px) rotate(1.5deg); } }
+@keyframes chef-nigiri { 25%, 75% { transform: translateY(4px) scale(1.02, .97); } 50% { transform: none; } }
+@keyframes chef-serve { 50% { transform: translate(14px, 8px) rotate(4deg) scale(1.03); } }
+.guest-doll { transform-box: fill-box; transform-origin: 50% 100%; }
+.guest-doll.act-wave { animation: guest-wave 1s ease-in-out; }
+.guest-doll.act-chomp { animation: guest-chomp .3s ease-in-out 2; }
+.guest-doll.act-happy { animation: guest-happy .9s ease-in-out; }
+.guest-doll.act-sit { animation: guest-sit .5s ease-out; }
+@keyframes guest-wave { 25% { transform: rotate(-5deg); } 50% { transform: rotate(4deg); } 75% { transform: rotate(-3deg); } }
+@keyframes guest-chomp { 50% { transform: translateY(-3px) scale(1.02, .98); } }
+@keyframes guest-happy { 25%, 75% { transform: translateY(-10px); } 50% { transform: none; } }
+@keyframes guest-sit { from { transform: translateY(-24px); opacity: 0; } 60% { transform: translateY(3px); opacity: 1; } }
+.pop-say { font-family: var(--font-body); font-weight: 700; font-size: 26px; text-anchor: middle; fill: #fff8ea; stroke: #6b4632; stroke-width: 6px; paint-order: stroke; stroke-linejoin: round; pointer-events: none; animation: say-pop 1.3s ease-out forwards; }
+@keyframes say-pop { 0% { opacity: 0; transform: translateY(6px); } 15%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-18px); } }
 .modal { border: 1px solid #dcc7aa; box-shadow: 0 28px 90px #35271d55, inset 0 2px 0 #fffdf9; line-height: 1.65; }
 .modal.book { background: linear-gradient(120deg, #fffbf2, #f8efdf); border-color: #dac4a3; }
 .modal h2 { color: #604631; }

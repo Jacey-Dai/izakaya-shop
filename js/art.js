@@ -143,7 +143,8 @@ window.KOBUNE_ART = (() => {
   // ---------- 木屐盘（堂食） ----------
   function geta(fishList) {
     const list = fishList.slice(0, 5);
-    const pieces = list.map((f, i) => `<g transform="translate(${18 + i * 52} 6) scale(.62)">${nigiriBody(f)}</g>`).join("");
+    // 每贯外面套一层 .bite，app.js 吃掉时对外层做动画，不影响里面的定位
+    const pieces = list.map((f, i) => `<g class="bite"><g transform="translate(${18 + i * 52} 6) scale(.62)">${nigiriBody(f)}</g></g>`).join("");
     const w = Math.max(200, 36 + list.length * 52);
     return svg(w, 70, `
       <rect x="8" y="48" width="14" height="16" fill="#b07a45" ${OL()}/>

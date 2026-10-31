@@ -239,47 +239,142 @@
     setTimeout(() => el.remove(), 2600);
   }
 
+  // ---------- 人物动作（T-48） ----------
+  // 人物是整张透明图，动作用 CSS 关键帧对整个人做弯腰、摇晃、弹跳等；减少动态效果时跳过等待。
+  const reduceMotion = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, reduceMotion() ? 0 : ms));
+  const animate = (el, frames, ms) => (reduceMotion() || !el.animate
+    ? Promise.resolve()
+    : el.animate(frames, { duration: ms, easing: "ease-in-out", fill: "forwards" }).finished);
+  function play(el, cls, ms) {
+    if (!el) return wait(0);
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();
+    el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), ms);
+    return wait(ms);
+  }
+  const inCounter = () => $(".scene").dataset.room === "counter";
+  // 春田只在吧台视角里出现；座敷视角不做师傅动作
+  const chefAct = (cls, ms) => (inCounter() ? play($(".chef-act"), cls, ms) : wait(0));
+  const guestAct = (cls, ms) => play($("#guest .guest-doll"), cls, ms);
+
+  // 人物头顶冒出的拟声词（日语，中英界面相同）
+  function say(x, y, text) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    el.setAttribute("class", "pop-say");
+    el.setAttribute("x", x);
+    el.setAttribute("y", y);
+    el.textContent = text;
+    $(".scene").appendChild(el);
+    setTimeout(() => el.remove(), 1300);
+  }
+  const chefSay = (text) => inCounter() && say(745, 235, text);
+  function guestSay(text) {
+    const guest = $("#guest");
+    if (guest.style.display === "none") return;
+    const seat = D.seats.find((s) => s.id === state.seat);
+    // 玩偶在吧台高 190、座敷高 220（见 guestSVG），字放在头部右上方
+    say(seat.marker[0] + 80, seat.marker[1] - (seat.id === "counter" ? 160 : 190), text);
+  }
+
   // 上菜（T-05）：吧台从师傅手边、座敷从门口把盘子送到客人旁边，坐标与 viewBox 一致。
   const DISH_SPOTS = {
     counter: { from: [640, 380], to: [735, 515], width: 170 },
     tatami: { from: [190, 430], to: [750, 562], width: 150 },
   };
-  const reduceMotion = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   // 盘子放进当前房间、排在热点之前：画在背景上，重叠处仍由原热点接收点击。
-  // 换房间时按新房间的落点和大小重画。
-  let dishArt = null;
+  // 换房间时按新房间的落点和大小重画，已经吃掉的那几贯保持隐藏。
+  const dishState = { art: null, mode: "dine", eaten: 0, busy: false };
   function placeDish(room) {
     const dish = $("#scene-dish");
     const { to: [x, y], width } = DISH_SPOTS[room];
     $(`.room-layer[data-room="${room}"] .hotspot`).before(dish);
     dish.setAttribute("transform", `translate(${x} ${y})`);
-    if (!dishArt) return;
-    const [, w, h] = dishArt.match(/width="(\d+)" height="(\d+)"/).map(Number);
+    if (!dishState.art) return;
+    const [, w, h] = dishState.art.match(/width="(\d+)" height="(\d+)"/).map(Number);
     const k = width / w;
-    dish.innerHTML = `<g class="dish-move"><rect class="hit-area" fill="transparent" stroke="transparent" rx="8" x="${-width / 2}" y="${-h * k}" width="${width}" height="${h * k}"/><g transform="translate(${-width / 2} ${-h * k}) scale(${k})">${dishArt}</g></g>`;
+    dish.innerHTML = `<g class="dish-move"><rect class="hit-area" fill="transparent" stroke="transparent" rx="8" x="${-width / 2}" y="${-h * k}" width="${width}" height="${h * k}"/><g transform="translate(${-width / 2} ${-h * k}) scale(${k})">${dishState.art}</g></g>`;
+    $$(".bite", dish).slice(0, dishState.eaten).forEach((b) => b.setAttribute("display", "none"));
   }
-
-  // 盘子留在座位上直到下一单或刷新；没有鱼的订单（只点饮料等）不端盘子。
-  function serveDish(lines, mode, done) {
-    const fishList = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
-    const dish = $("#scene-dish");
-    dishArt = !fishList.length ? null : mode === "takeout" ? ART.takeoutBox(fishList) : ART.geta(fishList);
-    if (!dishArt) { dish.style.display = "none"; done(); return; }
-    const room = $(".scene").dataset.room;
-    placeDish(room);
-    dish.style.display = "";
-    const move = dish.firstChild;
-    if (reduceMotion() || !move.animate) { done(); return; }
+  function dishOffset(room) {
     const [fx, fy] = DISH_SPOTS[room].from;
     const [toX, toY] = DISH_SPOTS[room].to;
-    const dx = fx - toX, dy = fy - toY;
-    move.animate([
+    return [fx - toX, fy - toY];
+  }
+  function hideDish() {
+    dishState.art = null;
+    $("#scene-dish").style.display = "none";
+  }
+
+  // 吧台：春田先切鱼、捏寿司，再把盘子递过来；盘子留在座位上，点它一贯一贯吃掉。
+  // 没有鱼的订单（只点饮料等）不端盘子。
+  async function serveDish(lines, mode, done) {
+    const fishList = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
+    const dish = $("#scene-dish");
+    hideDish();
+    if (!fishList.length) { done(); return; }
+    dishState.busy = true;
+    chefSay("トントン");
+    await chefAct("act-slice", 700);
+    chefSay("ぎゅっ");
+    await chefAct("act-nigiri", 700);
+    Object.assign(dishState, { art: mode === "takeout" ? ART.takeoutBox(fishList) : ART.geta(fishList), mode, eaten: 0 });
+    const room = $(".scene").dataset.room;
+    placeDish(room);
+    dish.setAttribute("aria-label", hotspotInfo("dish").title);
+    dish.style.display = "";
+    const [dx, dy] = dishOffset(room);
+    chefAct("act-serve", 900);
+    await animate(dish.firstChild, [
       { transform: `translate(${dx}px, ${dy}px) scale(.7)`, opacity: 0 },
       { transform: `translate(${dx}px, ${dy}px) scale(.85)`, opacity: 1, offset: 0.2 },
       { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 30}px) scale(.95)`, offset: 0.65 },
       { transform: "none", opacity: 1 },
-    ], { duration: 1300, easing: "ease-in-out" }).onfinish = done;
+    ], 1300);
+    dishState.busy = false;
+    done();
+  }
+
+  // 点盘子：吃掉一贯；全部吃完后客人满足，春田把空盘收走。外带盒点一下就带走。
+  async function eatDish() {
+    const dish = $("#scene-dish");
+    if (dishState.busy || !dishState.art) return;
+    dishState.busy = true;
+    if (dishState.mode === "takeout") {
+      guestAct("act-happy", 900);
+      await animate(dish.firstChild, [{ opacity: 1 }, { transform: "translate(0px, 40px) scale(.8)", opacity: 0 }], 700);
+      hideDish();
+      toast(t("toast.takeout"));
+    } else {
+      const left = $$(".bite", dish).filter((b) => b.getAttribute("display") !== "none");
+      guestSay("もぐもぐ");
+      guestAct("act-chomp", 600);
+      await animate(left[0], [{ opacity: 1 }, { transform: "translate(0px, -40px) scale(.6)", opacity: 0 }], 450);
+      left[0].setAttribute("display", "none");
+      dishState.eaten += 1;
+      if (left.length === 1) {
+        await wait(250);
+        guestSay("ごちそうさま！");
+        await guestAct("act-happy", 900);
+        await clearDish();
+      }
+    }
+    dishState.busy = false;
+  }
+
+  async function clearDish() {
+    const dish = $("#scene-dish");
+    const [dx, dy] = dishOffset($(".scene").dataset.room);
+    chefAct("act-serve", 900);
+    await animate(dish.firstChild, [
+      { transform: "none", opacity: 1 },
+      { transform: `translate(${dx * 0.4}px, ${dy * 0.4 - 25}px) scale(.95)`, opacity: 1, offset: 0.4 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.7)`, opacity: 0 },
+    ], 900);
+    hideDish();
+    toast(pick(chefLine("cleared")));
   }
 
   // 镜头只从已有 seat 派生，刷新与旧存档无需新增状态或迁移。
@@ -315,6 +410,7 @@
     state.seat = seat.id;
     store.set("seat", state.seat);
     updateHud();
+    guestAct("act-sit", 500);
     toast(t("toast.seated", { name: seatName(seat) }));
   }
 
@@ -797,7 +893,6 @@
     store.set("zukan", [...state.collected]);
     store.set("fresh", [...state.fresh]);
     state.cart = [];
-    state.lastOrder = [lines, fresh, mode];
     updateHud();
     // 先关掉订单，让客人看到上菜，再弹小票
     close();
@@ -807,11 +902,6 @@
     });
   }
 
-  // 座位上的盘子：点开重看这一单的小票
-  views.dish = {
-    cls: "book",
-    render: () => views.receipt.render(...state.lastOrder),
-  };
 
   views.receipt = {
     cls: "book",
@@ -974,13 +1064,16 @@
       tip.hidden = false;
     });
     el.addEventListener("blur", () => { tip.hidden = true; });
-    el.addEventListener("click", () => { tip.hidden = true; open(id); });
+    // 盘子不开弹窗，点一下吃一贯
+    const activate = () => { tip.hidden = true; if (id === "dish") eatDish(); else open(id); };
+    el.addEventListener("click", activate);
     el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tip.hidden = true; open(id); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); }
     });
   });
 
   function hotspotInfo(id) {
+    if (id === "dish" && dishState.mode === "takeout") id = "dishTakeout";
     const zh = D.hotspots[id];
     return { title: tx("hotspots", id, "title", zh.title), hint: tx("hotspots", id, "hint", zh.hint) };
   }
@@ -1013,7 +1106,13 @@
   const syncHudHeight = () => document.documentElement.style.setProperty("--hud-h", $(".hud").offsetHeight + "px");
   window.addEventListener("resize", syncHudHeight);
 
-  $("#chef-figure").innerHTML = `<g transform="translate(628 450)">${chefSVG()}</g>`;
+  $("#chef-figure").innerHTML = `<g class="chef-act"><g transform="translate(628 450)">${chefSVG()}</g></g>`;
   applyLang();
   syncHudHeight();
+  // 进店：春田鞠躬招呼，已经坐下的客人招手
+  setTimeout(() => {
+    chefSay("いらっしゃい！");
+    chefAct("act-bow", 1000);
+    if (state.seat) guestAct("act-wave", 1000);
+  }, 500);
 })();

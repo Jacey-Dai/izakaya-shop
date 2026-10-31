@@ -117,11 +117,14 @@ const root = path.resolve(__dirname, '..');
     await page.locator('#hud-cart').click(); assert.equal(await page.locator('.cart-line').count(),3);
     await page.locator('[data-inc]').first().click(); await page.locator('[data-dec]').first().click();
     await page.locator('#cart-submit').click();
-    // T-05: the dish is served to the seat first, then the receipt opens; the dish stays and reopens the receipt.
-    assert.equal(await page.locator('#overlay').isHidden(),true); assert.equal(await page.locator('#scene-dish .art-geta').isVisible(),true);
-    await page.locator('.receipt').waitFor({timeout:3000}); await close();
-    assert.equal(await page.locator('#scene-dish').isVisible(),true); await page.locator('#scene-dish').click({force:true}); await page.locator('.receipt').waitFor();
-    await page.waitForTimeout(300); await shot('receipt');
+    // T-05/T-48: Haruta slices and shapes, the dish is served to the seat, then the receipt opens.
+    assert.equal(await page.locator('#overlay').isHidden(),true); assert.equal(await page.locator('.chef-act.act-slice').count(),1);
+    await page.locator('#scene-dish .art-geta').waitFor({timeout:3000});
+    await page.locator('.receipt').waitFor({timeout:4000}); await page.waitForTimeout(300); await shot('receipt'); await close();
+    // T-50: each click eats one piece; after the last one Haruta clears the plate.
+    const bites = await page.locator('#scene-dish .bite').count(); assert.ok(bites>=2);
+    for (let i=0;i<bites;i++) { await page.locator('#scene-dish').click({force:true}); if (i===0) assert.equal(await page.locator('.pop-say').count()>=1,true); await page.waitForTimeout(650); }
+    await page.locator('#scene-dish').waitFor({state:'hidden',timeout:4000});
     const collected = await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.zukan')));
     assert.ok(collected.length>=2);
     await page.reload(); await loaded(); assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.zukan')).length),collected.length);
@@ -136,7 +139,8 @@ const root = path.resolve(__dirname, '..');
     await take.goto(pathToFileURL(path.join(root,'index.html')).href);
     await take.locator('.scene [data-id="tablemenu"]:visible').click();await take.locator('[data-add]').first().click();await take.keyboard.press('Escape');
     await take.locator('#hud-cart').click(); await take.locator('[data-mode="takeout"]').click();await take.locator('#cart-submit').click();
-    await take.locator('.receipt .art-takeout').waitFor({timeout:3000}); assert.equal(await take.locator('#scene-dish .art-takeout').isVisible(),true); await fresh.close();
+    await take.locator('.receipt .art-takeout').waitFor({timeout:4000}); assert.equal(await take.locator('#scene-dish .art-takeout').isVisible(),true);
+    await take.keyboard.press('Escape'); await take.locator('#scene-dish').click({force:true}); await take.locator('#scene-dish').waitFor({state:'hidden',timeout:3000}); await fresh.close();
     // Tatami camera follows the existing saved seat, preserves orders and all entry points.
     await page.locator('#hud-seat').click(); await page.locator('[data-seat="tatami"]').click();
     assert.equal(await page.locator('.scene').getAttribute('data-room'),'tatami');
@@ -185,6 +189,6 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('.steam').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.room-layer.is-active').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
-    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, stool vs tatami sitting pose, mobile views, reduced motion.');
+    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, stool vs tatami sitting pose, mobile views, reduced motion.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
