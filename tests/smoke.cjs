@@ -125,6 +125,10 @@ const root = path.resolve(__dirname, '..');
     const bites = await page.locator('#scene-dish .bite').count(); assert.ok(bites>=2);
     for (let i=0;i<bites;i++) { await page.locator('#scene-dish').click({force:true}); if (i===0) assert.equal(await page.locator('.pop-say').count()>=1,true); await page.waitForTimeout(650); }
     await page.locator('#scene-dish').waitFor({state:'hidden',timeout:4000});
+    // T-53: the receipt book keeps the order and the visit count; the detail reopens the receipt.
+    await page.locator('#hud-receipts').click(); assert.equal(await page.locator('.receipt-row').count(),1);
+    await page.locator('.receipt-row').first().click(); assert.equal(await page.locator('.receipt-meta').isVisible(),true); await close();
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.visits'))),1);
     const collected = await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.zukan')));
     assert.ok(collected.length>=2);
     await page.reload(); await loaded(); assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.zukan')).length),collected.length);

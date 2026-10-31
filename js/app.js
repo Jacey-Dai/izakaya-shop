@@ -88,6 +88,9 @@
     orderMode: "dine",
     luck: 0,
     omakase: null,
+    // 小票本（T-53）：最近 20 张小票；来店次数 = 下单次数，供积分卡、常客故事使用
+    receipts: store.get("receipts", []),
+    visits: store.get("visits", 0),
     menuTab: "sashimi",
     zukanFilter: "all",
   };
@@ -287,7 +290,9 @@
 
   // 盘子放进当前房间、排在热点之前：画在背景上，重叠处仍由原热点接收点击。
   // 换房间时按新房间的落点和大小重画，已经吃掉的那几贯保持隐藏。
-  const dishState = { art: null, mode: "dine", eaten: 0, busy: false };
+  const dishState = { art: null, mode: "dine", eaten: 0, busy: false, serving: false };
+  // 给读屏用户的播报（上菜、还剩几贯）
+  const announce = (msg) => { $("#live-status").textContent = msg; };
   function placeDish(room) {
     const dish = $("#scene-dish");
     const { to: [x, y], width } = DISH_SPOTS[room];
@@ -317,6 +322,7 @@
     hideDish();
     if (!fishList.length) { done(); return; }
     dishState.busy = true;
+    dishState.serving = true;
     chefSay("トントン");
     await chefAct("act-slice", 700);
     chefSay("ぎゅっ");
@@ -335,6 +341,8 @@
       { transform: "none", opacity: 1 },
     ], 1300);
     dishState.busy = false;
+    dishState.serving = false;
+    announce(t("live.served", { n: $$(".bite", dish).length }));
     done();
   }
 
@@ -355,6 +363,7 @@
       await animate(left[0], [{ opacity: 1 }, { transform: "translate(0px, -40px) scale(.6)", opacity: 0 }], 450);
       left[0].setAttribute("display", "none");
       dishState.eaten += 1;
+      if (left.length > 1) announce(t("live.left", { n: left.length - 1 }));
       if (left.length === 1) {
         await wait(250);
         guestSay("ごちそうさま！");
@@ -431,13 +440,16 @@
 
     updateRoom(seat);
     const guest = $("#guest");
-    if (seat) {
-      guest.setAttribute("transform", `translate(${seat.marker[0]} ${seat.marker[1]})`);
-      guest.innerHTML = guestSVG(state.guest);
-      guest.style.display = "";
-    } else {
-      guest.style.display = "none";
+    // 只在座位或形象变了时重画客人，加菜时不打断正在做的动作
+    const guestKey = seat ? seat.id + JSON.stringify(state.guest) : "";
+    if (guest.dataset.key !== guestKey) {
+      guest.dataset.key = guestKey;
+      if (seat) {
+        guest.setAttribute("transform", `translate(${seat.marker[0]} ${seat.marker[1]})`);
+        guest.innerHTML = guestSVG(state.guest);
+      }
     }
+    guest.style.display = seat ? "" : "none";
   }
 
   function bumpCart() {
@@ -887,6 +899,8 @@
       open("seats", "cart");
       return;
     }
+    // 上一单还没端上来时先不收新单，避免两单的盘子和小票互相顶掉
+    if (dishState.serving) { toast(t("toast.busy")); return; }
     const lines = state.cart;
     const eaten = [...new Set(lines.flatMap((l) => l.fish || []))];
     const fresh = eaten.filter((id) => !state.collected.has(id));
@@ -894,14 +908,65 @@
     store.set("zukan", [...state.collected]);
     store.set("fresh", [...state.fresh]);
     state.cart = [];
+    state.visits += 1;
+    store.set("visits", state.visits);
+    state.receipts.unshift({ at: Date.now(), visit: state.visits, mode, seat: mode === "dine" ? state.seat : null, lines: JSON.parse(JSON.stringify(lines)), fresh });
+    state.receipts.length = Math.min(state.receipts.length, MAX_RECEIPTS);
+    store.set("receipts", state.receipts);
     updateHud();
-    // 先关掉订单，让客人看到上菜，再弹小票
+    // 先关掉订单，让客人看到上菜，再弹小票；上菜期间客人打开了别的弹窗就不打断，小票留在小票本里
     close();
     serveDish(lines, mode, () => {
-      open("receipt", lines, fresh, mode);
+      if (current) toast(t("toast.receiptSaved"));
+      else open("receipt", lines, fresh, mode);
       fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
     });
   }
+
+  // ---------- 小票本（T-53） ----------
+  const MAX_RECEIPTS = 20;
+  const receiptTotal = (r) => r.lines.reduce((s, l) => s + l.price * l.qty, 0);
+  const receiptDate = (r) => new Date(r.at).toLocaleString(isEn() ? "en-US" : "zh-CN", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  function receiptText(r) {
+    const head = `${shopName()} · ${t("receipts.visit", { n: r.visit })} · ${receiptDate(r)}`;
+    const rows = r.lines.map((l) => `- ${lineName(l)} ×${l.qty}  ${rmb(l.price * l.qty)}`);
+    return [head, ...rows, `${t("cart.total")} ${rmb(receiptTotal(r))}`].join("\n");
+  }
+
+  views.receipts = {
+    cls: "book",
+    render: () => `
+      <h2>${t("receipts.title")}</h2>
+      <p class="sub">${t("receipts.sub", { max: MAX_RECEIPTS, n: state.visits })}</p>
+      ${state.receipts.length ? `<ul class="receipt-list">${state.receipts.map((r, i) => `
+        <li><button class="receipt-row" data-receipt="${i}">
+          <span class="stamp-mini">${r.mode === "takeout" ? "持" : "承"}</span>
+          <span><b>${t("receipts.visit", { n: r.visit })}</b><small>${receiptDate(r)} · ${t(r.mode === "takeout" ? "cart.takeout" : "cart.dine")} · ${t("receipts.items", { n: r.lines.length })}</small></span>
+          <span class="price">${rmb(receiptTotal(r))}</span>
+        </button></li>`).join("")}</ul>` : `<p>${t("receipts.empty")}</p>`}`,
+    mount: () => {
+      $$("[data-receipt]", body).forEach((b) => b.addEventListener("click", () => open("receiptDetail", Number(b.dataset.receipt))));
+    },
+  };
+
+  views.receiptDetail = {
+    cls: "book",
+    render: (i) => {
+      const r = state.receipts[i];
+      return `
+        <p class="sub receipt-meta">${t("receipts.visit", { n: r.visit })} · ${receiptDate(r)}</p>
+        ${views.receipt.render(r.lines, r.fresh, r.mode)}
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn" data-open="receipts">${t("receipts.back")}</button>
+          <button class="btn" id="receipt-copy">${t("receipts.copy")}</button>
+        </div>`;
+    },
+    mount: (i) => {
+      $("#receipt-copy", body).addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(receiptText(state.receipts[i])); toast(t("receipts.copied")); } catch { /* 没有剪贴板权限时静默 */ }
+      });
+    },
+  };
 
 
   views.receipt = {
@@ -925,6 +990,7 @@
           <div class="btn-row" style="justify-content:center">
             <button class="btn primary" data-open="zukan">${t("receipt.zukan")}</button>
             <button class="btn" data-open="chef">${t("receipt.again")}</button>
+            <button class="btn" data-open="receipts">${t("receipt.book")}</button>
           </div>
         </div>`;
     },
