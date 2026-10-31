@@ -244,5 +244,16 @@ window.KOBUNE_ART = (() => {
   };
   const deco = (kind) => (DECO[kind] ? DECO[kind]() : "");
 
-  return { sashimi, nigiri, maki, geta, takeoutBox, tamagoyaki, deco, slicePiece, OUTLINE: T.ol };
+  // ---------- 玩家摆的刺身拼盘（T-11 / T-12）：slices = [{ fish, x, y, r }]，x / y 是 0–1 的盘面坐标 ----------
+  // 俯视摆好的盘子在场景里压扁成椭圆，每片外层套 .bite，客人可以一片片吃
+  function platter(slices) {
+    const pieces = slices.map((s) => `<g class="bite"><g transform="translate(${20 + s.x * 180} ${14 + s.y * 64}) rotate(${s.r}) scale(.8 .58) translate(-20 -30)">${slicePiece(s.fish)}</g></g>`).join("");
+    return svg(220, 96, `
+      <ellipse cx="110" cy="52" rx="106" ry="40" fill="#f7f1e6" ${OL()}/>
+      <ellipse cx="110" cy="50" rx="88" ry="30" fill="#ece3d2"/>
+      <path d="M40 46 q8 -6 16 0 q-8 6 -16 0 Z" fill="#6aa04a"/>
+      ${pieces}`, "art art-platter");
+  }
+
+  return { sashimi, nigiri, maki, geta, takeoutBox, tamagoyaki, platter, deco, slicePiece, OUTLINE: T.ol };
 })();

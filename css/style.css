@@ -600,3 +600,33 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   50% { translate: 40px 0; }
   to { translate: -10px 820px; rotate: 360deg; }
 }
+
+/* 当厨师（T-10 ~ T-12） */
+.role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+.role-card { display: grid; justify-items: center; gap: 6px; padding: 14px; border: 2px solid #e2cfb3; border-radius: 16px; background: #fffdf7; color: inherit; font: inherit; cursor: pointer; text-align: center; }
+.role-card.active { border-color: var(--shu); background: #fbeee6; }
+.role-card:hover, .role-card:focus-visible { background: #f7ead6; }
+.role-card b { font-size: 18px; }
+.role-card span { color: var(--sumi-soft); font-size: 13px; }
+.role-art { width: 120px; height: 132px; border-radius: 20px; }
+.order-wrap { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.order-ticket { list-style: none; margin: 10px 0 0; padding: 10px 14px; background: #fffdf7; border: 1px dashed #c9ac84; border-radius: 10px; display: grid; gap: 4px; }
+.order-ticket li { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.order-ticket span { font-weight: 700; color: var(--shu); }
+.plating { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: start; margin-top: 10px; }
+.plating-case { display: grid; gap: 6px; }
+.cut-btn { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid #e2cfb3; border-radius: 10px; background: #fffdf7; color: inherit; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.cut-btn:hover, .cut-btn:focus-visible { background: #f7ead6; }
+.plating-board { position: relative; aspect-ratio: 1; max-width: 340px; width: 100%; margin: 0 auto; border-radius: 50%; background: radial-gradient(circle, #fbf7ef 0 58%, #ece3d2 59% 66%, #f7f1e6 67%); border: 3px solid #c9ac84; box-shadow: inset 0 0 0 10px #f7f1e6, 0 6px 14px #93683b26; touch-action: none; overflow: hidden; }
+.plating-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 22%; text-align: center; color: var(--sumi-soft); font-size: 13px; margin: 0; }
+.pslice { position: absolute; cursor: grab; touch-action: none; line-height: 0; }
+.pslice:active { cursor: grabbing; }
+.pslice.sel, .pslice:focus-visible { outline: 2px dashed var(--shu); outline-offset: 2px; border-radius: 8px; }
+.stars { font-size: 40px; color: #e9b73a; letter-spacing: 6px; }
+.stars span { color: #e2d6c2; }
+@media (max-width: 640px) {
+  .role-cards { grid-template-columns: 1fr; }
+  .order-wrap { grid-template-columns: 1fr; justify-items: center; }
+  .plating { grid-template-columns: 1fr; }
+  .plating-case { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+}

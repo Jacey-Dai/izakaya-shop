@@ -101,6 +101,12 @@
     stamps: store.get("stamps", 0),
     prizes: store.get("prizes", []),
     // 生日彩蛋（T-58）：{ m, d } 只存在本机；bdayYear 记录今年是否已经庆祝过
+    // 当厨师（T-10）：role = guest / chef；npc 是当前来点单的客人；plating 是盘子上摆的鱼片
+    role: store.get("role", "guest"),
+    npc: null,
+    plating: [],
+    plateSel: -1,
+    chefStats: store.get("chefStats", { served: 0, stars: 0 }),
     birthday: store.get("birthday", null),
     bdayYear: store.get("bdayYear", 0),
     menuTab: "sashimi",
@@ -315,7 +321,7 @@
   function guestSay(text) {
     const guest = $("#guest");
     if (guest.style.display === "none") return;
-    const seat = D.seats.find((s) => s.id === state.seat);
+    const seat = shownSeat();
     // 玩偶在吧台高 190、座敷高 220（见 guestSVG），字放在头部右上方
     say(seat.marker[0] + 80, seat.marker[1] - (seat.id === "counter" ? 160 : 190), text);
   }
@@ -504,7 +510,7 @@
   // 坐下、没有别的盘子、没有弹窗时才端；今年庆祝过就不再端
   function maybeBirthday() {
     const year = new Date().getFullYear();
-    if (!isBirthday() || state.bdayYear === year || !state.seat || dishState.serving || dishState.art || current) return;
+    if (isChef() || !isBirthday() || state.bdayYear === year || !state.seat || dishState.serving || dishState.art || current) return;
     state.bdayYear = year;
     store.set("bdayYear", year);
     toast(t("bday.toast"), true);
@@ -558,6 +564,8 @@
     $("#hud-seat").focus();
   });
 
+  const isChef = () => state.role === "chef";
+  const shownSeat = () => D.seats.find((s) => s.id === (isChef() ? "counter" : state.seat));
   function updateHud() {
     const count = state.cart.reduce((s, l) => s + l.qty, 0);
     const cartBtn = $("#hud-cart");
@@ -566,18 +574,23 @@
     $("#hud-seat").textContent = t("hud.seat", { name: seat ? seatName(seat) : t("hud.seatNone") });
     $("#hud-zukan").textContent = t("hud.zukan", { n: state.collected.size, total: D.fish.length });
 
-    updateRoom(seat);
+    $("#hud-role").textContent = t("hud.role", { name: t(isChef() ? "role.chef" : "role.guest") });
+
+    // 当厨师时镜头固定在吧台，吧台上坐的是来点单的客人
+    const shown = shownSeat();
+    const look = isChef() ? state.npc.look : state.guest;
+    updateRoom(shown);
     const guest = $("#guest");
     // 只在座位或形象变了时重画客人，加菜时不打断正在做的动作
-    const guestKey = seat ? seat.id + JSON.stringify(state.guest) : "";
+    const guestKey = shown ? (isChef() ? "npc:" : "") + shown.id + JSON.stringify(look) : "";
     if (guest.dataset.key !== guestKey) {
       guest.dataset.key = guestKey;
-      if (seat) {
-        guest.setAttribute("transform", `translate(${seat.marker[0]} ${seat.marker[1]})`);
-        guest.innerHTML = guestSVG(state.guest);
+      if (shown) {
+        guest.setAttribute("transform", `translate(${shown.marker[0]} ${shown.marker[1]})`);
+        guest.innerHTML = guestSVG(look, shown.id);
       }
     }
-    guest.style.display = seat ? "" : "none";
+    guest.style.display = shown ? "" : "none";
   }
 
   function bumpCart() {
@@ -771,8 +784,273 @@
     }
   }
 
+  // ---------- 当厨师（T-10 ~ T-12） ----------
+  const CM = D.chefMode;
+  const cmText = (key, i) => {
+    const list = isEn() && EN.chefMode && EN.chefMode[key];
+    return (list && list[i]) || CM[key][i];
+  };
+  const reactionText = (stars, i) => {
+    const list = isEn() && EN.chefMode && EN.chefMode.reactions[stars];
+    return (list && list[i]) || CM.reactions[stars][i];
+  };
+  // 新客人：随机装扮，点 2–3 种常见鱼，每种 1–3 片；鱼柜里多放 2 种干扰
+  function newCustomer() {
+    const look = Object.fromEntries(Object.entries(D.guest).map(([k, opts]) => [k, pick(opts).id]));
+    const pool = menuFish.filter((f) => f.rarity <= 2).sort(() => Math.random() - 0.5);
+    const kinds = Math.random() < 0.4 ? 3 : 2;
+    const order = Object.fromEntries(pool.slice(0, kinds).map((f) => [f.id, 1 + Math.floor(Math.random() * (kinds === 3 ? 2 : 3))]));
+    const caseIds = pool.slice(0, kinds + 2).map((f) => f.id).sort(() => Math.random() - 0.5);
+    state.npc = { look, order, caseIds, intro: pickIndex(CM.orderIntro), reaction: 0 };
+    state.plating = [];
+    state.plateSel = -1;
+  }
+  const orderText = (order) => Object.entries(order).map(([id, n]) => t("plate.line", { name: fishName(fishById[id]), n })).join(t("chef.listSep"));
+
+  function setRole(role) {
+    if (dishState.serving) { toast(t("toast.busy")); return; }
+    if (role === state.role) { if (isChef()) open("chefOrder"); else close(); return; }
+    state.role = role;
+    store.set("role", role);
+    hideDish();
+    if (isChef()) {
+      newCustomer();
+      updateHud();
+      guestAct("act-sit", 500);
+      open("chefOrder");
+    } else {
+      updateHud();
+      close();
+      toast(t("role.backGuest"));
+      if (!state.seat) open("seats");
+    }
+  }
+
+  function rateDish(order, slices) {
+    const got = {};
+    slices.forEach((sl) => { got[sl.fish] = (got[sl.fish] || 0) + 1; });
+    let wrong = 0, diff = 0;
+    new Set([...Object.keys(order), ...Object.keys(got)]).forEach((id) => {
+      if (!order[id]) wrong += got[id];
+      else diff += Math.abs((got[id] || 0) - order[id]);
+    });
+    if (!wrong && !diff) return 3;
+    if (!wrong && diff <= 1) return 2;
+    return 1;
+  }
+
+  // 上菜：盘子按玩家摆的样子端给客人，客人评价后自己吃完，春田（你）收盘，下一位客人进店
+  function serveToNpc() {
+    if (!state.plating.length) { toast(t("plate.empty")); return; }
+    if (dishState.serving) { toast(t("toast.busy")); return; }
+    const npc = state.npc;
+    const stars = rateDish(npc.order, state.plating);
+    const used = [...new Set(state.plating.map((sl) => sl.fish))];
+    const fresh = used.filter((id) => !state.collected.has(id));
+    fresh.forEach((id) => { state.collected.add(id); state.fresh.add(id); });
+    store.set("zukan", [...state.collected]);
+    store.set("fresh", [...state.fresh]);
+    state.chefStats.served += 1;
+    state.chefStats.stars += stars;
+    store.set("chefStats", state.chefStats);
+    const bonus = stars === 3 && state.stamps < STAMP_MAX;
+    if (bonus) { state.stamps += 1; store.set("stamps", state.stamps); }
+    npc.reaction = pickIndex(CM.reactions[stars]);
+    const art = ART.platter(state.plating.map((sl) => ({ ...sl, fish: fishById[sl.fish] })));
+    state.plating = [];
+    state.plateSel = -1;
+    updateHud();
+    close();
+    serveDish([], "dine", () => {
+      guestSay(stars === 3 ? "おいしい！" : stars === 2 ? "うん！" : "あれ？");
+      guestAct(stars > 1 ? "act-happy" : "act-chomp", 900);
+      open("chefResult", stars, fresh, bonus);
+      npcEats();
+    }, { art, say: "お待ち！" });
+  }
+
+  async function npcEats() {
+    await wait(1600);
+    while (isChef() && dishState.art) {
+      await eatDish();
+      await wait(650);
+    }
+    if (!isChef()) return;
+    newCustomer();
+    updateHud();
+    guestAct("act-sit", 500);
+    toast(t("order.nextArrived"));
+  }
+
+  const sliceSVG = (f, w = 40) => `<svg viewBox="0 0 40 60" width="${w}" height="${w * 1.5}" aria-hidden="true">${ART.slicePiece(f)}</svg>`;
+
   // ---------- 各个视图 ----------
   const views = {};
+
+  views.role = {
+    cls: "book",
+    render: () => {
+      const st = state.chefStats;
+      return `
+        <h2>${t("role.title")}</h2>
+        <p class="sub">${t("role.sub")}</p>
+        <div class="role-cards">
+          <button class="role-card ${isChef() ? "" : "active"}" data-role="guest" aria-pressed="${!isChef()}">
+            <svg viewBox="-125 -255 250 275" class="role-art" aria-hidden="true"><rect x="-125" y="-255" width="250" height="275" fill="#f4e6d1"/>${guestSVG(state.guest, "preview")}</svg>
+            <b>${t("role.guest")}</b><span>${t("role.guestDesc")}</span>
+          </button>
+          <button class="role-card ${isChef() ? "active" : ""}" data-role="chef" aria-pressed="${isChef()}">
+            ${chefPortrait()}
+            <b>${t("role.chef")}</b><span>${t("role.chefDesc")}</span>
+          </button>
+        </div>
+        <p class="card-hint">${t("role.look")}</p>
+        ${st.served ? `<p class="card-hint">${t("role.stats", { n: st.served, avg: (st.stars / st.served).toFixed(1) })}</p>` : ""}`;
+    },
+    mount: () => {
+      $$("[data-role]", body).forEach((b) => b.addEventListener("click", () => setRole(b.dataset.role)));
+    },
+  };
+
+  views.chefOrder = {
+    cls: "book",
+    render: () => {
+      const npc = state.npc;
+      return `
+        <h2>${t("order.title")}</h2>
+        <div class="order-wrap">
+          <svg viewBox="-125 -255 250 275" class="role-art" aria-hidden="true"><rect x="-125" y="-255" width="250" height="275" fill="#f4e6d1"/>${guestSVG(npc.look, "preview")}</svg>
+          <div>
+            <div class="bubble">${cmText("orderIntro", npc.intro)}</div>
+            <ul class="order-ticket">
+              ${Object.entries(npc.order).map(([id, n]) => `<li>${sliceSVG(fishById[id], 22)}<b>${fishName(fishById[id])}</b><span>× ${n}</span></li>`).join("")}
+            </ul>
+          </div>
+        </div>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn primary" data-open="plating">${t("order.start")}</button>
+          <button class="btn" id="npc-next">${t("order.next")}</button>
+          <button class="btn" data-open="role">${t("role.pick")}</button>
+        </div>`;
+    },
+    mount: () => {
+      $("#npc-next", body).addEventListener("click", () => {
+        if (dishState.serving || dishState.art) { toast(t("toast.busy")); return; }
+        newCustomer(); updateHud(); guestAct("act-sit", 500); rerender();
+      });
+    },
+  };
+
+  views.plating = {
+    cls: "book",
+    render: () => {
+      const npc = state.npc;
+      const n = state.plating.length;
+      return `
+        <h2>${t("plate.title")}</h2>
+        <p class="sub">${t("plate.order", { list: orderText(npc.order) })}</p>
+        <div class="plating">
+          <div class="plating-case" role="group" aria-label="${t("plate.case")}">
+            ${npc.caseIds.map((id) => `<button class="cut-btn" data-cut="${id}">${sliceSVG(fishById[id], 26)}<span>${fishName(fishById[id])}</span></button>`).join("")}
+          </div>
+          <div class="plating-board" id="plating-board">
+            ${state.plating.map((sl, i) => `<div class="pslice ${i === state.plateSel ? "sel" : ""}" data-i="${i}" tabindex="0" role="button" aria-label="${t("plate.slice", { name: fishName(fishById[sl.fish]) })}" style="left:${sl.x * 100}%;top:${sl.y * 100}%;z-index:${sl.z};transform:translate(-50%,-50%) rotate(${sl.r}deg)">${sliceSVG(fishById[sl.fish], 40)}</div>`).join("")}
+            ${n ? "" : `<p class="plating-empty">${t("plate.prompt")}</p>`}
+          </div>
+        </div>
+        <p class="card-hint">${t("plate.hint")} · ${t("plate.count", { n, max: CM.maxSlices })}</p>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn" id="plate-rotate" ${state.plateSel < 0 ? "disabled" : ""}>${t("plate.rotate")}</button>
+          <button class="btn" id="plate-clear" ${n ? "" : "disabled"}>${t("plate.clear")}</button>
+          <button class="btn" id="plate-shuffle" ${n ? "" : "disabled"}>${t("plate.shuffle")}</button>
+          <button class="btn primary" id="plate-serve" ${n ? "" : "disabled"}>${t("plate.serve")}</button>
+        </div>`;
+    },
+    mount: () => {
+      const board = $("#plating-board", body);
+      let top = Math.max(0, ...state.plating.map((sl) => sl.z));
+      const clamp = (v) => Math.min(0.86, Math.max(0.14, v));
+      const place = (el, sl) => {
+        el.style.left = sl.x * 100 + "%";
+        el.style.top = sl.y * 100 + "%";
+        el.style.zIndex = sl.z;
+        el.style.transform = `translate(-50%,-50%) rotate(${sl.r}deg)`;
+      };
+      const select = (i) => {
+        state.plateSel = i;
+        $$(".pslice", board).forEach((el) => el.classList.toggle("sel", Number(el.dataset.i) === i));
+        $("#plate-rotate", body).disabled = i < 0;
+      };
+      $$("[data-cut]", body).forEach((b) => b.addEventListener("click", () => {
+        if (state.plating.length >= CM.maxSlices) { toast(t("plate.full")); return; }
+        chefSay("トン");
+        chefAct("act-slice", 500);
+        state.plating.push({ fish: b.dataset.cut, x: 0.3 + Math.random() * 0.4, y: 0.3 + Math.random() * 0.4, r: Math.round(Math.random() * 60 - 30), z: top + 1 });
+        state.plateSel = state.plating.length - 1;
+        rerender();
+      }));
+      $$(".pslice", board).forEach((el) => {
+        const i = Number(el.dataset.i);
+        const sl = state.plating[i];
+        el.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          select(i);
+          sl.z = ++top;
+          place(el, sl);
+          el.setPointerCapture(e.pointerId);
+          const move = (ev) => {
+            const r = board.getBoundingClientRect();
+            sl.x = clamp((ev.clientX - r.left) / r.width);
+            sl.y = clamp((ev.clientY - r.top) / r.height);
+            place(el, sl);
+          };
+          const up = () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up); el.removeEventListener("pointercancel", up); };
+          el.addEventListener("pointermove", move);
+          el.addEventListener("pointerup", up);
+          el.addEventListener("pointercancel", up);
+        });
+        el.addEventListener("wheel", (e) => { e.preventDefault(); select(i); sl.r = (sl.r + (e.deltaY > 0 ? 15 : -15)) % 360; place(el, sl); }, { passive: false });
+        // 键盘：方向键移动，R 旋转
+        el.addEventListener("keydown", (e) => {
+          const step = { ArrowLeft: [-0.04, 0], ArrowRight: [0.04, 0], ArrowUp: [0, -0.04], ArrowDown: [0, 0.04] }[e.key];
+          if (step) { e.preventDefault(); sl.x = clamp(sl.x + step[0]); sl.y = clamp(sl.y + step[1]); }
+          else if (e.key === "r" || e.key === "R") sl.r = (sl.r + 30) % 360;
+          else return;
+          select(i);
+          place(el, sl);
+        });
+        el.addEventListener("focus", () => select(i));
+      });
+      $("#plate-rotate", body).addEventListener("click", () => {
+        const sl = state.plating[state.plateSel];
+        if (!sl) return;
+        sl.r = (sl.r + 30) % 360;
+        place($(`.pslice[data-i="${state.plateSel}"]`, board), sl);
+      });
+      $("#plate-clear", body).addEventListener("click", () => { state.plating = []; state.plateSel = -1; rerender(); });
+      $("#plate-shuffle", body).addEventListener("click", () => {
+        state.plating.forEach((sl) => { sl.x = 0.2 + Math.random() * 0.6; sl.y = 0.2 + Math.random() * 0.6; sl.r = Math.round(Math.random() * 360); });
+        rerender();
+      });
+      $("#plate-serve", body).addEventListener("click", serveToNpc);
+    },
+  };
+
+  views.chefResult = {
+    cls: "book",
+    render: (stars, fresh, bonus) => `
+      <div class="receipt">
+        <div class="stars" role="img" aria-label="${t("result.stars", { n: stars })}">${"★".repeat(stars)}<span>${"★".repeat(3 - stars)}</span></div>
+        <h2>${t("result.title" + stars)}</h2>
+        <div class="bubble">${reactionText(stars, state.npc.reaction)}</div>
+        ${bonus ? `<p class="stamp-note">${t("result.stamp", { have: state.stamps, max: STAMP_MAX })}</p>` : ""}
+        ${fresh.length ? `<p>${t("receipt.new", { n: fresh.length })}</p><div class="unlock-row">${fresh.map((id) => cardHTML(fishById[id], true)).join("")}</div>` : ""}
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn primary" id="result-ok">${t("result.ok")}</button>
+        </div>
+      </div>`,
+    mount: () => { $("#result-ok", body).addEventListener("click", close); },
+  };
 
   views.photo = {
     cls: "book",
@@ -814,6 +1092,7 @@
       <div class="btn-row">
         <button class="btn primary" data-open="seats">${t("btn.goSeats")}</button>
         <button class="btn" data-open="tablemenu">${t("btn.seeMenu")}</button>
+        <button class="btn" data-open="role">${t("role.pick")}</button>
       </div>`,
   };
 
@@ -1221,6 +1500,7 @@
   };
 
   function submitOrder() {
+    if (isChef()) { toast(t("role.noOrder")); return; }
     const mode = state.orderMode;
     if (mode === "dine" && !state.seat) {
       toast(t("toast.pickSeat"));
@@ -1546,7 +1826,9 @@
     });
     el.addEventListener("blur", () => { tip.hidden = true; });
     // 盘子不开弹窗，点一下吃一贯
-    const activate = () => { tip.hidden = true; if (id === "dish") eatDish(); else open(id); };
+    // 当厨师时：点春田或客人看订单，点鱼柜去摆盘
+    const route = () => (isChef() && { chef: "chefOrder", guest: "chefOrder", fishcase: "plating" }[id]) || id;
+    const activate = () => { tip.hidden = true; if (id === "dish") { if (!isChef()) eatDish(); } else open(route()); };
     el.addEventListener("click", activate);
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); }
@@ -1555,6 +1837,7 @@
 
   function hotspotInfo(id) {
     if (id === "dish" && dishState.mode === "takeout") id = "dishTakeout";
+    if (id === "guest" && isChef()) id = "npc";
     const zh = D.hotspots[id];
     return { title: tx("hotspots", id, "title", zh.title), hint: tx("hotspots", id, "hint", zh.hint) };
   }
@@ -1587,6 +1870,7 @@
   const syncHudHeight = () => document.documentElement.style.setProperty("--hud-h", $(".hud").offsetHeight + "px");
   window.addEventListener("resize", syncHudHeight);
 
+  if (isChef()) newCustomer();
   $("#chef-figure").innerHTML = `<g class="chef-act"><g transform="translate(628 450)">${chefSVG()}</g></g>`;
   applyLang();
   syncHudHeight();

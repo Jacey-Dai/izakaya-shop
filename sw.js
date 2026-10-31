@@ -3,7 +3,7 @@
  * 页面本身走“网络优先”，断网时用缓存；其余同源文件走“缓存优先”，没有时再联网并存一份。
  * 发布新版本时把 VERSION 改成和 index.html 的 ?v= 一样，旧缓存会在激活时删掉。
  */
-const VERSION = "20261031-8";
+const VERSION = "20261031-9";
 const CACHE = "kobune-" + VERSION;
 const CORE = [
   "./",

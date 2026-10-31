@@ -79,6 +79,15 @@ window.SHOP_DATA_EN = {
     christmas: { name: "Christmas", line: "Merry Christmas! Sushi counts as a present, right?" },
   },
 
+  chefMode: {
+    orderIntro: ["Hello! I'd like a sashimi plate with:", "Chef, could I have a plate like this:", "I'm in the mood for these today, please!"],
+    reactions: {
+      3: ["Exactly what I wanted! And so pretty.", "Oishii! You're a real chef.", "Every slice is right. So professional!"],
+      2: ["That's about what I ordered, thanks!", "Tasty! Though it's a little different from my order."],
+      1: ["Hm, this isn't quite what I ordered… still tasty though.", "Did you read my ticket wrong, chef?"],
+    },
+  },
+
   prizes: {
     coupon: { name: "Coupon", desc: "A coupon for your next visit.", line: "A coupon! Bring it next time." },
     neko: { name: "Cat-petting pass", desc: "You get to pet the shop cat.", line: "A cat-petting pass! Our cat loves people." },
@@ -108,6 +117,7 @@ window.SHOP_DATA_EN = {
     drinks: { title: "Sake shelf", hint: "Sake, plum wine and tea" },
     chef: { title: "Chef Haruta", hint: "Chat, or ask for his recommendation" },
     guest: { title: "You", hint: "Change your hair or outfit" },
+    npc: { title: "Customer", hint: "See what the customer ordered" },
     fishcase: { title: "Fish case", hint: "Pick fish and build your own plate" },
     seats: { title: "Seats", hint: "Choose where to sit" },
     tablemenu: { title: "Table menu", hint: "Open the full menu" },

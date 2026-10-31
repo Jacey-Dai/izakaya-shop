@@ -208,6 +208,29 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('.steam').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.room-layer.is-active').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
+    // T-10–T-12: play as the chef. A customer orders, you cut and plate, and an exact plate earns 3 stars.
+    const cp = await context.newPage(); const cerrors = []; cp.on('pageerror', e => cerrors.push(e.message));
+    await cp.goto(pathToFileURL(path.join(root, 'index.html')).href + '?date=2026-03-01&weather=clear'); await cp.waitForFunction(() => document.querySelector('#chef-figure image'));
+    await cp.locator('#hud-role').click(); await cp.locator('[data-role="chef"]').click();
+    assert.equal(await cp.locator('.scene').getAttribute('data-room'), 'counter'); assert.ok(await cp.locator('.order-ticket li').count() >= 2);
+    await cp.locator('#modal [data-open="plating"]').click();
+    const orderSub = await cp.locator('#modal .sub').textContent();
+    const caseFish = await cp.locator('[data-cut]').evaluateAll(n => n.map(e => [e.dataset.cut, e.textContent.trim()]));
+    for (const part of orderSub.replace(/^[^:：]*[:：]\s*/, '').split(/[、,]\s*/)) {
+      const m = part.match(/(.+?) × (\d+)/); const id = caseFish.find(([, n]) => n === m[1].trim())[0];
+      for (let i = 0; i < +m[2]; i++) await cp.locator(`[data-cut="${id}"]`).click();
+    }
+    const sl = await cp.locator('.pslice').first().boundingBox(); const bd = await cp.locator('#plating-board').boundingBox();
+    await cp.mouse.move(sl.x + sl.width / 2, sl.y + sl.height / 2); await cp.mouse.down(); await cp.mouse.move(bd.x + bd.width * 0.3, bd.y + bd.height * 0.5, { steps: 4 }); await cp.mouse.up();
+    await cp.locator('#plate-rotate').click(); await cp.locator('#plate-serve').click();
+    await cp.locator('.stars').waitFor({ timeout: 5000 }); assert.equal(await cp.locator('.stars').getAttribute('aria-label'), '3 of 3 stars');
+    assert.equal(await cp.locator('#scene-dish .art-platter').count(), 1); await cp.locator('#result-ok').click();
+    await cp.locator('#scene-dish').waitFor({ state: 'hidden', timeout: 12000 });
+    assert.equal(await cp.evaluate(() => JSON.parse(localStorage.getItem('kobune.chefStats')).served), 1);
+    await cp.locator('#hud-cart').click(); assert.equal(await cp.locator('#cart-submit').count(), 0); await cp.keyboard.press('Escape');
+    await cp.reload(); await cp.waitForFunction(() => document.querySelector('#chef-figure image')); assert.equal(await cp.locator('#hud-role').textContent(), 'Role: Chef');
+    await cp.locator('#hud-role').click(); await cp.locator('[data-role="guest"]').click(); assert.equal(await cp.locator('#hud-role').textContent(), 'Role: Guest');
+    assert.deepEqual(cerrors, []); await cp.close();
     // T-55/T-56: festival decorations and rain follow ?date= / ?weather=, and never block hotspots.
     const fp = await context.newPage(); const ferrors = []; fp.on('pageerror', e => ferrors.push(e.message));
     const indexUrl = pathToFileURL(path.join(root, 'index.html')).href;
@@ -252,6 +275,6 @@ const root = path.resolve(__dirname, '..');
       assert.deepEqual(werrors,[]);
       await web.close();
     } finally { server.close(); }
-    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, set meals, points card and prize draw, stool vs tatami sitting pose, mobile views, reduced motion, festival decorations and rain, birthday tamagoyaki, photo mode and offline reload over http.');
+    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, set meals, points card and prize draw, stool vs tatami sitting pose, mobile views, reduced motion, chef mode with plating and rating, festival decorations and rain, birthday tamagoyaki, photo mode and offline reload over http.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
