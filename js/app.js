@@ -115,69 +115,65 @@
   }
   const rarityColor = (r) => D.rarity[r].color;
 
-  // 客人背影，原点在座位面中心，向上画。画风与师傅一致（柔和描边）
+  // 原创微缩玩偶图集：四种发型 × 三种服装，场景与预览共用。
+  // 只对中性材质做颜色映射，保留真实发束、织物、肤色和腰带。
   let guestArtId = 0;
-  function guestSVG(g) {
-    const opt = (k) => D.guest[k].find((o) => o.id === g[k]) || D.guest[k][0];
-    const line = `stroke="${ART.OUTLINE}" stroke-opacity=".6" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"`;
-    const id = "guest-art-" + guestArtId++;
-    const hairColor = opt("hairColor").color;
-    const clothColor = opt("outfit").color;
-    const hair = `url(#${id}-hair)`;
-    const cloth = `url(#${id}-cloth)`;
-    const style = g.hairStyle;
-    const acc = g.accessory;
+  function guestSVG(g, seat = state.seat) {
+    const opt = (key) => D.guest[key].find((o) => o.id === g[key]) || D.guest[key][0];
+    const style = opt("hairStyle").id;
     const wear = opt("clothing").id;
-    const back = {
-      short: "",
-      bun: `<circle cx="0" cy="-138" r="11" fill="${hair}" ${line}/>`,
-      ponytail: `<ellipse cx="0" cy="-80" rx="8" ry="20" fill="${hair}" ${line}/><rect x="-5" y="-98" width="10" height="5" rx="2" fill="#c0392b"/>`,
-      long: `<path d="M-23 -112 Q-26 -70 -20 -56 L20 -56 Q26 -70 23 -112 Z" fill="${hair}" ${line}/>`,
-    }[style] || "";
-    const extra = {
-      none: "",
-      kanzashi: `<line x1="6" y1="${style === "bun" ? -140 : -126}" x2="24" y2="${style === "bun" ? -150 : -138}" stroke="#d9a520" stroke-width="3" stroke-linecap="round"/><circle cx="25" cy="${style === "bun" ? -151 : -139}" r="4" fill="#c0392b"/>`,
-      hat: `<ellipse cx="0" cy="-122" rx="30" ry="7" fill="#d9c08a" ${line}/><path d="M-17 -123 Q-16 -142 0 -142 Q16 -142 17 -123 Z" fill="#d9c08a" ${line}/><rect x="-17" y="-128" width="34" height="5" fill="#c0392b"/>`,
-    }[acc] || "";
-
-    const torso = `<path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="${cloth}" ${line}/>`;
-    let outfit;
-    if (wear === "kimono" || wear === "yukata") {
-      const kimono = wear === "kimono";
-      const obi = kimono ? "#d9a520" : "#c0392b";
-      // 和服：宽袖、白色后领、宽腰带和背后的结；浴衣：窄一些的袖子、白色小花纹、红色腰带
-      const sleeve = kimono ? 46 : 40;
-      const pattern = kimono
-        ? `<g fill="rgba(255,255,255,.35)"><circle cx="-16" cy="-12" r="4"/><circle cx="14" cy="-60" r="4"/><circle cx="18" cy="-14" r="3"/><circle cx="-20" cy="-62" r="3"/></g>`
-        : `<g stroke="rgba(255,255,255,.7)" stroke-width="2" fill="none"><circle cx="-14" cy="-14" r="5"/><circle cx="12" cy="-62" r="5"/><circle cx="16" cy="-10" r="4"/><circle cx="-18" cy="-64" r="4"/><circle cx="-2" cy="-20" r="3"/></g>`;
-      outfit = `
-        <path d="M-24 -76 L-${sleeve} -68 L-${sleeve} -18 Q-${sleeve} -12 -${sleeve - 6} -12 L-26 -14 Z" fill="${cloth}" ${line}/>
-        <path d="M24 -76 L${sleeve} -68 L${sleeve} -18 Q${sleeve} -12 ${sleeve - 6} -12 L26 -14 Z" fill="${cloth}" ${line}/>
-        ${torso}
-        ${pattern}
-        <path d="M-13 -86 Q0 -78 13 -86" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
-        <rect x="-31" y="-48" width="62" height="${kimono ? 18 : 12}" fill="${obi}" ${line}/>
-        <path d="M-2 -46 L-22 -${kimono ? 58 : 54} L-22 -${kimono ? 22 : 30} Z M2 -46 L22 -${kimono ? 58 : 54} L22 -${kimono ? 22 : 30} Z" fill="${obi}" ${line}/>
-        <rect x="-7" y="-50" width="14" height="${kimono ? 16 : 12}" rx="3" fill="${obi}" ${line}/>`;
-    } else {
-      outfit = `${torso}<path d="M-12 -84 Q0 -76 12 -84" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>`;
-    }
-    return `
-      <defs>
-        <radialGradient id="${id}-hair" cx=".35" cy=".25" r=".8"><stop stop-color="${hairColor}"/><stop offset="1" stop-color="#201b19"/></radialGradient>
-        <linearGradient id="${id}-cloth"><stop stop-color="${clothColor}"/><stop offset=".35" stop-color="${clothColor}"/><stop offset="1" stop-color="#34333c"/></linearGradient>
-      </defs>
-      <ellipse cx="0" cy="2" rx="30" ry="6" fill="rgba(0,0,0,.18)"/>
-      <g filter="url(#guest-soft)">${outfit}</g>
-      <path d="M-30 0 Q-34 -50 -22 -78 Q0 -90 22 -78 Q34 -50 30 0 Z" fill="url(#guest-cloth)" pointer-events="none"/>
-      <rect x="-6" y="-94" width="12" height="12" fill="#fbd9bf"/>
-      <circle cx="-22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
-      <circle cx="22" cy="-108" r="5" fill="#fbd9bf" ${line}/>
-      ${style === "long" ? back : ""}
-      <circle cx="0" cy="-112" r="23" fill="${hair}" ${line}/>
-      <g fill="none" stroke="#fff6de" stroke-opacity=".12" stroke-linecap="round" stroke-width="2"><path d="M-15 -119 Q-10 -135 -1 -132"/><path d="M-9 -117 Q-5 -128 4 -129"/><path d="M5 -118 Q9 -127 13 -123"/></g>
-      ${style === "long" ? "" : back}
-      ${extra}`;
+    const col = ["short", "bun", "ponytail", "long"].indexOf(style);
+    const row = ["casual", "kimono", "yukata"].indexOf(wear);
+    // 透明像素边界，单位为图集中每格的局部坐标；不裁切原始素材文件。
+    const frames = [
+      [[88, 13, 242, 323], [80, 18, 239, 318], [70, 17, 242, 319], [72, 19, 238, 317]],
+      [[54, 11, 306, 325], [50, 13, 300, 323], [39, 13, 304, 323], [40, 14, 297, 323]],
+      [[90, 6, 235, 320], [83, 9, 235, 317], [74, 9, 237, 317], [76, 12, 231, 314]],
+    ];
+    const [x, y, w, h] = frames[row][col];
+    const id = "guest-doll-" + guestArtId++;
+    const height = seat === "counter" ? 190 : 220;
+    const headEnd = [178, 172, 166][row];
+    const tailEnd = [233, 224, 219][row];
+    const longEnd = [208, 202, 199][row];
+    const hairRegion = (fill) => {
+      let shape = `<rect width="384" height="${headEnd}" fill="${fill}"/>`;
+      if (style === "ponytail") shape += `<path d="M158 ${headEnd - 25} Q163 ${tailEnd - 15} 193 ${tailEnd} Q228 ${tailEnd + 5} 238 ${tailEnd - 25} L234 ${headEnd - 25} Z" fill="${fill}"/>`;
+      if (style === "long") shape += `<path d="M88 ${headEnd - 20} L300 ${headEnd - 20} Q305 ${longEnd - 5} 269 ${longEnd} Q240 ${longEnd + 8} 200 ${longEnd - 3} Q152 ${longEnd + 9} 111 ${longEnd} Q87 ${longEnd - 5} 88 ${headEnd - 20} Z" fill="${fill}"/>`;
+      return shape;
+    };
+    const tint = (color) => {
+      const rgb = color.slice(1).match(/../g).map((hex) => parseInt(hex, 16) / 255);
+      return rgb.map((c) => `${.2126 * c * 1.8} ${.7152 * c * 1.8} ${.0722 * c * 1.8} 0 ${c * .025}`).join(" ") + " 0 0 0 1 0";
+    };
+    const accessory = opt("accessory").id;
+    let extra = "";
+    if (accessory === "hat") extra = `<svg class="guest-accessory" x="-72" y="${-height - 3}" width="144" height="100" viewBox="43 153 881 614" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
+    if (accessory === "kanzashi") extra = `<svg class="guest-accessory" x="16" y="${-height + 30}" width="58" height="48" viewBox="1020 178 713 584" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
+    return `<g class="guest-doll" data-hair="${style}" data-clothing="${wear}" data-outfit="${opt("outfit").id}" data-hair-color="${opt("hairColor").id}" data-accessory="${accessory}">
+      <ellipse cx="0" cy="-2" rx="${wear === "kimono" ? 76 : 58}" ry="7" fill="#36281d" opacity=".22"/>
+      <svg class="guest-doll-art" x="-110" y="${-height}" width="220" height="${height}" viewBox="${x - 5} ${y - 3} ${w + 10} ${h + 6}" overflow="hidden">
+        <defs>
+          <image id="${id}-sprite" href="assets/art/guest-dolls.webp" x="${-col * 384}" y="${-row * 1024 / 3}" width="1536" height="1024"/>
+          <filter id="${id}-neutral" filterUnits="userSpaceOnUse" x="0" y="0" width="384" height="342" color-interpolation-filters="sRGB">
+            <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -4 0 4 0 1" result="neutral"/>
+            <feComposite in="neutral" in2="SourceGraphic" operator="in"/>
+          </filter>
+          <filter id="${id}-hair" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${tint(opt("hairColor").color)}"/></filter>
+          <filter id="${id}-cloth" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${tint(opt("outfit").color)}"/></filter>
+          <mask id="${id}-neutral-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342"><use href="#${id}-sprite" filter="url(#${id}-neutral)"/></mask>
+          <mask id="${id}-hair-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342">${hairRegion("white")}</mask>
+          <mask id="${id}-cloth-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342"><rect width="384" height="${wear === "casual" ? 316 : 342}" fill="white"/>${hairRegion("black")}</mask>
+        </defs>
+        <use href="#${id}-sprite"/>
+        <g mask="url(#${id}-neutral-mask)">
+          <g mask="url(#${id}-cloth-mask)"><use href="#${id}-sprite" filter="url(#${id}-cloth)"/></g>
+          <g mask="url(#${id}-hair-mask)"><use href="#${id}-sprite" filter="url(#${id}-hair)"/></g>
+        </g>
+      </svg>
+      ${extra}
+      <path class="guest-hit" d="M0 ${-height - 5} C-86 ${-height - 5} -86 ${-height + 115} 0 ${-height + 115} C86 ${-height + 115} 86 ${-height - 5} 0 ${-height - 5} Z M-42 -115 Q-78 -95 -${wear === "kimono" ? 90 : 73} -30 Q-85 10 0 2 Q85 10 ${wear === "kimono" ? 90 : 73} -30 Q78 -95 42 -115 Z" fill="transparent" stroke="transparent"/>
+    </g>`;
   }
 
   // 原创手作人偶角色，场景与对话共用本地透明资源，无网络依赖。
@@ -606,10 +602,10 @@
       <h2>お客さん</h2>
       <p class="sub">${t("guest.sub")}</p>
       <div class="guest-wrap">
-        <svg class="guest-preview" viewBox="-60 -165 120 175" aria-hidden="true">
-          <rect x="-60" y="-165" width="120" height="175" fill="#e9dcc0"/>
-          <ellipse cx="0" cy="4" rx="36" ry="9" fill="#9e2b25"/>
-          ${guestSVG(state.guest)}
+        <svg class="guest-preview" viewBox="-125 -255 250 275" aria-hidden="true">
+          <rect x="-125" y="-255" width="250" height="275" fill="#f4e6d1"/>
+          <ellipse cx="0" cy="4" rx="88" ry="12" fill="#bd7656"/>
+          ${guestSVG(state.guest, "preview")}
         </svg>
         <div class="guest-opts">
           ${Object.entries(D.guest).map(([k, opts]) => `
@@ -866,7 +862,7 @@
     });
     el.addEventListener("focus", () => {
       const info = hotspotInfo(id);
-      const box = el.getBoundingClientRect();
+      const box = (el.querySelector(".guest-hit") || el).getBoundingClientRect();
       tip.innerHTML = `<b>${info.title}</b><span>${info.hint}</span>`;
       tip.style.left = Math.max(8, Math.min(box.left, window.innerWidth - 260)) + "px";
       tip.style.top = Math.min(box.bottom + 8, window.innerHeight - 90) + "px";
