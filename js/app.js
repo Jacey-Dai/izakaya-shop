@@ -6,7 +6,8 @@
   const ART = window.KOBUNE_ART;
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-  const yen = (n) => (n === 0 ? t("free") : "¥" + n.toLocaleString("ja-JP"));
+  // 价格单位是人民币（PRD Q4）
+  const rmb = (n) => (n === 0 ? t("free") : "¥" + n.toLocaleString("zh-CN"));
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const pickIndex = (arr) => Math.floor(Math.random() * arr.length);
 
@@ -531,7 +532,7 @@
       <p class="sub">${t("board.sub")}</p>
       <div class="chalk-cols">
         ${todaysFresh.map((f) => `
-          <button class="chalk-col" data-add="s-${f.id}" title="${fishName(f)}">${f.kanji}<small>${yen(f.price)}</small></button>`).join("")}
+          <button class="chalk-col" data-add="s-${f.id}" title="${fishName(f)}">${f.kanji}<small>${rmb(f.price)}</small></button>`).join("")}
         <button class="chalk-col special" data-open="chef">おまかせ<small>${t("board.market")}</small></button>
       </div>
       <p class="board-note">— 今日も元気に営業中 —</p>`,
@@ -542,7 +543,7 @@
     render: () => {
       const hot = D.menu.find((c) => c.id === "hot").items;
       const sweet = D.menu.find((c) => c.id === "sweet").items;
-      const tag = (it, cls = "") => `<button class="wood-tag ${cls}" data-add="${it.id}" title="${itemName(it)}${itemDesc(it) ? " · " + itemDesc(it) : ""}">${it.jp}<small>${yen(it.price)}</small></button>`;
+      const tag = (it, cls = "") => `<button class="wood-tag ${cls}" data-add="${it.id}" title="${itemName(it)}${itemDesc(it) ? " · " + itemDesc(it) : ""}">${it.jp}<small>${rmb(it.price)}</small></button>`;
       return `
         <h2>お品書き</h2>
         <p class="sub">${t("tags.sub")}</p>
@@ -564,7 +565,7 @@
               <div class="bottle" style="--c:${it.bottle}"></div>
               <b>${it.jp}</b>
               <span>${itemName(it)} · ${itemDesc(it)}</span>
-              <div class="price">${yen(it.price)}</div>
+              <div class="price">${rmb(it.price)}</div>
               <div class="btn-row" style="justify-content:center;margin-top:8px">
                 <button class="btn" data-add="${it.id}">${t("drinks.order")}</button>
               </div>
@@ -592,7 +593,7 @@
               <li class="menu-item">
                 <div class="dish">${itemArt(it)}</div>
                 <div class="name"><b>${itemName(it)}${got ? `<span class="got">${t("menu.got")}</span>` : ""}</b><span>${it.jp}${itemDesc(it) ? " · " + itemDesc(it) : ""}</span></div>
-                <span class="price">${yen(it.price)}</span>
+                <span class="price">${rmb(it.price)}</span>
                 <button class="btn add" data-add="${it.id}">${t("menu.order")}</button>
               </li>`;
           }).join("")}
@@ -626,7 +627,7 @@
       const idx = pool.findIndex((f) => (r -= weightOf(f)) <= 0);
       chosen.push(pool.splice(idx < 0 ? 0 : idx, 1)[0]);
     }
-    const price = Math.round(chosen.reduce((s, f) => s + f.price, 0) * 0.9 / 10) * 10;
+    const price = Math.round(chosen.reduce((s, f) => s + f.price, 0) * 0.9);
     return { fish: chosen, price };
   }
 
@@ -648,7 +649,7 @@
         extra = `
           <div class="omakase-preview">
             <div class="plate">${plateInnerHTML(om.fish.map((f) => f.id))}</div>
-            <p class="plate-summary">${om.fish.map((f) => `${fishName(f)} (${D.rarity[f.rarity].label})`).join(" · ")}<br><span class="price">${yen(om.price)}</span></p>
+            <p class="plate-summary">${om.fish.map((f) => `${fishName(f)} (${D.rarity[f.rarity].label})`).join(" · ")}<br><span class="price">${rmb(om.price)}</span></p>
             <div class="btn-row" style="justify-content:center">
               <button class="btn primary" id="om-take">${t("chef.take")}</button>
               <button class="btn" id="om-reroll">${t("chef.reroll")}</button>
@@ -724,12 +725,12 @@
                 ${swatchHTML(f, 2)}
                 <b>${fishName(f)}</b>
                 <span>${f.jp}</span>
-                <span class="price">${yen(f.price)}</span>
+                <span class="price">${rmb(f.price)}</span>
               </button>`).join("")}
           </div>
           <div class="plate-area">
             <div class="plate" id="plate">${plateInnerHTML(state.plate, true)}</div>
-            <p class="plate-summary">${state.plate.length ? `${t("case.count", { n: state.plate.length, max: MAX_PORTIONS })} · <span class="price">${yen(total)}</span>` : t("case.empty")}</p>
+            <p class="plate-summary">${state.plate.length ? `${t("case.count", { n: state.plate.length, max: MAX_PORTIONS })} · <span class="price">${rmb(total)}</span>` : t("case.empty")}</p>
             <div class="btn-row" style="justify-content:center">
               <button class="btn primary" id="plate-order" ${state.plate.length ? "" : "disabled"}>${t("case.order")}</button>
               <button class="btn" id="plate-clear" ${state.plate.length ? "" : "disabled"}>${t("case.clear")}</button>
@@ -852,10 +853,10 @@
             <li class="cart-line">
               <div><b>${lineName(l)}</b>${lineNote(l) ? `<small>${lineNote(l)}</small>` : ""}</div>
               <div class="qty"><button data-dec="${i}" aria-label="${t("cart.dec")}">−</button><span>${l.qty}</span><button data-inc="${i}" aria-label="${t("cart.inc")}">+</button></div>
-              <span class="price">${yen(l.price * l.qty)}</span>
+              <span class="price">${rmb(l.price * l.qty)}</span>
             </li>`).join("")}
         </ul>
-        <div class="cart-total"><span>${t("cart.total")}</span><span class="price">${yen(total)}</span></div>
+        <div class="cart-total"><span>${t("cart.total")}</span><span class="price">${rmb(total)}</span></div>
         <div class="btn-row" style="justify-content:flex-end">
           <button class="btn" data-open="tablemenu">${t("cart.more")}</button>
           <button class="btn primary" id="cart-submit">${t("cart.submit")}</button>
@@ -916,7 +917,7 @@
           <div class="stamp">${takeout ? "お持ち帰り" : "注文承り"}</div>
           <h2>${takeout ? t("receipt.takeout") : pick(chefLine("afterOrder"))}</h2>
           ${art ? `<div class="served">${art}</div>` : ""}
-          <p class="sub">${t("receipt.summary", { n: lines.length })} <span class="price">${yen(total)}</span></p>
+          <p class="sub">${t("receipt.summary", { n: lines.length })} <span class="price">${rmb(total)}</span></p>
           ${fresh.length ? `
             <p>${t("receipt.new", { n: fresh.length })}</p>
             <div class="unlock-row">${fresh.map((id) => cardHTML(fishById[id], true)).join("")}</div>`
@@ -997,7 +998,7 @@
               <dt>${t("fish.texture")}</dt><dd>${fishText(f, "texture")}</dd>
               <dt>${t("fish.flavor")}</dt><dd>${fishText(f, "flavor")}</dd>
               <dt>${t("fish.season")}</dt><dd>${fishText(f, "season")}</dd>
-              <dt>${t("fish.price")}</dt><dd class="price">${yen(f.price)} / ${t("fish.perPortion")}</dd>
+              <dt>${t("fish.price")}</dt><dd class="price">${rmb(f.price)} / ${t("fish.perPortion")}</dd>
             </dl>
             <p>${fishText(f, "desc")}</p>
             <div class="btn-row">
