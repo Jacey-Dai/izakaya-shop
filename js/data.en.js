@@ -90,7 +90,8 @@ window.SHOP_DATA_EN = {
     tablemenu: { title: "Table menu", hint: "Open the full menu" },
     zukan: { title: "Scroll · Fish book", hint: "See the fish you've collected" },
     neko: { title: "Lucky cat", hint: "Give it a pat and draw a fortune" },
-    dish: { title: "Your order", hint: "Take another look at the receipt" },
+    dish: { title: "Your order", hint: "Click to eat a piece" },
+    dishTakeout: { title: "Takeout box", hint: "Click to take it with you" },
   },
 
   chef: {
@@ -108,6 +109,7 @@ window.SHOP_DATA_EN = {
     omakaseIntro: "Alright, leave it to me.",
     legendary: " …You're lucky today. You don't see this fish often.",
     afterOrder: ["Hai, omachi!", "Enjoy!", "I'm proud of this plate. Give it a try."],
+    cleared: ["Gochisōsama! I'll take the plate.", "Clean plate! Come again soon.", "Glad you liked it. See you next time."],
   },
 
   omikuji: [

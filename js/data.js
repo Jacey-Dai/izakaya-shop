@@ -159,7 +159,8 @@ window.SHOP_DATA = {
     tablemenu: { title: "桌面菜单 · メニュー", hint: "翻开完整菜单点菜" },
     zukan: { title: "挂轴 · 鱼图鉴", hint: "查看你收集到的鱼生" },
     neko: { title: "招财猫 · 招き猫", hint: "摸一摸，抽一支签" },
-    dish: { title: "你的这一单", hint: "再看一眼小票" },
+    dish: { title: "你的这一单", hint: "点一下吃一贯" },
+    dishTakeout: { title: "外带盒", hint: "点一下带走" },
   },
 
   // 厨师形象。春田师傅默认男性；以后玩家“当厨师”（PRD T-10）时可以选男 / 女。
@@ -184,6 +185,7 @@ window.SHOP_DATA = {
     omakaseIntro: "好，那就交给我吧。",
     legendary: "……今天运气不错，这条鱼可不常见。",
     afterOrder: ["はい、お待ち！", "请慢用～", "这盘我很满意，你尝尝。"],
+    cleared: ["ごちそうさま！盘子我收走啦。", "吃得真干净，下次再来～", "满意的话，记得再来哦。"],
   },
 
   omikuji: [

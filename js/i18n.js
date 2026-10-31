@@ -24,6 +24,7 @@ window.I18N = {
     "toast.plateFull": "盘子装满啦",
     "toast.pickSeat": "先选个座位吧",
     "toast.newEntry": "图鉴新收录：{name}",
+    "toast.takeout": "外带盒带上啦，回家慢慢吃～",
 
     "noren.welcome": "欢迎光临！这是一家只有吧台和一间小座敷的寿司小店。把鼠标移到店里的东西上看看吧：",
     "noren.items": [
@@ -141,6 +142,7 @@ window.I18N = {
     "hud.seatNone": "none",
     "hud.zukan": "Fish book {n}/{total}",
     "toast.added": "Added: {name}",
+    "toast.takeout": "Box in hand. Enjoy it at home!",
     "toast.seated": "Seated: {name}",
     "toast.plateFull": "The plate is full",
     "toast.pickSeat": "Please pick a seat first",
