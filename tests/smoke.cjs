@@ -114,7 +114,11 @@ const root = path.resolve(__dirname, '..');
     await page.locator('#om-take').click(); await close();
     await page.locator('#hud-cart').click(); assert.equal(await page.locator('.cart-line').count(),3);
     await page.locator('[data-inc]').first().click(); await page.locator('[data-dec]').first().click();
-    await page.locator('#cart-submit').click(); assert.equal(await page.locator('.receipt').isVisible(),true);
+    await page.locator('#cart-submit').click();
+    // T-05: the dish is served to the seat first, then the receipt opens; the dish stays and reopens the receipt.
+    assert.equal(await page.locator('#overlay').isHidden(),true); assert.equal(await page.locator('#scene-dish .art-geta').isVisible(),true);
+    await page.locator('.receipt').waitFor({timeout:3000}); await close();
+    assert.equal(await page.locator('#scene-dish').isVisible(),true); await page.locator('#scene-dish').click({force:true}); await page.locator('.receipt').waitFor();
     await page.waitForTimeout(300); await shot('receipt');
     const collected = await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.zukan')));
     assert.ok(collected.length>=2);
@@ -130,14 +134,14 @@ const root = path.resolve(__dirname, '..');
     await take.goto(pathToFileURL(path.join(root,'index.html')).href);
     await take.locator('.scene [data-id="tablemenu"]:visible').click();await take.locator('[data-add]').first().click();await take.keyboard.press('Escape');
     await take.locator('#hud-cart').click(); await take.locator('[data-mode="takeout"]').click();await take.locator('#cart-submit').click();
-    assert.equal(await take.locator('.art-takeout').isVisible(),true); await fresh.close();
+    await take.locator('.receipt .art-takeout').waitFor({timeout:3000}); assert.equal(await take.locator('#scene-dish .art-takeout').isVisible(),true); await fresh.close();
     // Tatami camera follows the existing saved seat, preserves orders and all entry points.
     await page.locator('#hud-seat').click(); await page.locator('[data-seat="tatami"]').click();
     assert.equal(await page.locator('.scene').getAttribute('data-room'),'tatami');
     assert.equal(await page.locator('#scene-counter').isHidden(),true);
     assert.equal(await page.locator('#scene-tatami').isVisible(),true);
     assert.equal(await page.locator('#scene-counter .hotspot[tabindex="0"]').count(),0);
-    assert.equal(await page.locator('#scene-tatami .hotspot[tabindex="0"]').count(),10);
+    assert.equal(await page.locator('#scene-tatami .hotspot[tabindex="0"]:not(#scene-dish)').count(),10);
     await page.waitForTimeout(650); await shot('tatami');
     assert.equal(await page.locator('#guest .guest-doll-art').getAttribute('height'),'220');
     await open('tablemenu');await page.locator('[data-add]').first().click();await close();
@@ -156,7 +160,7 @@ const root = path.resolve(__dirname, '..');
     // Complete an order from the tatami view, including seat-required checkout continuation.
     await open('tablemenu');await page.locator('[data-add]').first().click();await close();
     await page.locator('#hud-cart').click();await page.locator('#cart-submit').click();
-    assert.equal(await page.locator('.receipt').isVisible(),true);await close();
+    await page.locator('.receipt').waitFor({timeout:3000});await close();
     // Mobile: no page/modal overflow; all views and scene remain reachable by scrolling.
     await page.setViewportSize({width:390,height:844});
     for (const lang of ['zh','en']) {
@@ -178,6 +182,6 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('.steam').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.room-layer.is-active').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
-    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, mobile views, reduced motion.');
+    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, mobile views, reduced motion.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Yuji+Syuku&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <!-- 发布 CSS / JS 改动时同步递增资源版本，避免新 HTML 混用旧缓存。 -->
-  <link rel="stylesheet" href="css/style.css?v=20261031-1">
+  <link rel="stylesheet" href="css/style.css?v=20261031-2">
 </head>
 <body>
   <header class="hud">
@@ -79,6 +79,8 @@
         </g>
         <!-- 客人保留所有自定义选项和存档，座位坐标与当前视角匹配。 -->
         <g id="guest" class="hotspot" data-id="guest" style="display:none"></g>
+        <!-- 结账后端上来的盘子 / 外带盒，留在座位前直到下一单或刷新（T-05）。 -->
+        <g id="scene-dish" class="hotspot" data-id="dish" style="display:none"></g>
       </svg>
     </div>
     <!-- 食物插画上很淡的纸张颗粒（art.js） -->
@@ -104,10 +106,10 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script src="js/i18n.js?v=20261031-1"></script>
-  <script src="js/data.js?v=20261031-1"></script>
-  <script src="js/data.en.js?v=20261031-1"></script>
-  <script src="js/art.js?v=20261031-1"></script>
-  <script src="js/app.js?v=20261031-1"></script>
+  <script src="js/i18n.js?v=20261031-2"></script>
+  <script src="js/data.js?v=20261031-2"></script>
+  <script src="js/data.en.js?v=20261031-2"></script>
+  <script src="js/art.js?v=20261031-2"></script>
+  <script src="js/app.js?v=20261031-2"></script>
 </body>
 </html>

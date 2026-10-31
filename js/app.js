@@ -202,6 +202,49 @@
     setTimeout(() => el.remove(), 2600);
   }
 
+  // 上菜（T-05）：吧台从师傅手边、座敷从门口把盘子送到客人旁边，坐标与 viewBox 一致。
+  const DISH_SPOTS = {
+    counter: { from: [640, 380], to: [735, 515], width: 170 },
+    tatami: { from: [190, 430], to: [750, 562], width: 150 },
+  };
+  const reduceMotion = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  // 盘子放进当前房间、排在热点之前：画在背景上，重叠处仍由原热点接收点击。
+  // 换房间时按新房间的落点和大小重画。
+  let dishArt = null;
+  function placeDish(room) {
+    const dish = $("#scene-dish");
+    const { to: [x, y], width } = DISH_SPOTS[room];
+    $(`.room-layer[data-room="${room}"] .hotspot`).before(dish);
+    dish.setAttribute("transform", `translate(${x} ${y})`);
+    if (!dishArt) return;
+    const [, w, h] = dishArt.match(/width="(\d+)" height="(\d+)"/).map(Number);
+    const k = width / w;
+    dish.innerHTML = `<g class="dish-move"><rect class="hit-area" fill="transparent" stroke="transparent" rx="8" x="${-width / 2}" y="${-h * k}" width="${width}" height="${h * k}"/><g transform="translate(${-width / 2} ${-h * k}) scale(${k})">${dishArt}</g></g>`;
+  }
+
+  // 盘子留在座位上直到下一单或刷新；没有鱼的订单（只点饮料等）不端盘子。
+  function serveDish(lines, mode, done) {
+    const fishList = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
+    const dish = $("#scene-dish");
+    dishArt = !fishList.length ? null : mode === "takeout" ? ART.takeoutBox(fishList) : ART.geta(fishList);
+    if (!dishArt) { dish.style.display = "none"; done(); return; }
+    const room = $(".scene").dataset.room;
+    placeDish(room);
+    dish.style.display = "";
+    const move = dish.firstChild;
+    if (reduceMotion() || !move.animate) { done(); return; }
+    const [fx, fy] = DISH_SPOTS[room].from;
+    const [toX, toY] = DISH_SPOTS[room].to;
+    const dx = fx - toX, dy = fy - toY;
+    move.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(.7)`, opacity: 0 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.85)`, opacity: 1, offset: 0.2 },
+      { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 30}px) scale(.95)`, offset: 0.65 },
+      { transform: "none", opacity: 1 },
+    ], { duration: 1300, easing: "ease-in-out" }).onfinish = done;
+  }
+
   // 镜头只从已有 seat 派生，刷新与旧存档无需新增状态或迁移。
   function updateRoom(seat) {
     const room = seat && seat.id === "tatami" ? "tatami" : "counter";
@@ -220,6 +263,7 @@
     $("#back-counter").hidden = room !== "tatami";
     $(".room-bar").hidden = room !== "tatami";
     if (changed) {
+      placeDish(room);
       $("#tooltip").hidden = true;
       $$(".hotspot.linked").forEach((el) => el.classList.remove("linked"));
       const scroll = $(".scene-scroll");
@@ -716,10 +760,21 @@
     store.set("zukan", [...state.collected]);
     store.set("fresh", [...state.fresh]);
     state.cart = [];
+    state.lastOrder = [lines, fresh, mode];
     updateHud();
-    open("receipt", lines, fresh, mode);
-    fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
+    // 先关掉订单，让客人看到上菜，再弹小票
+    close();
+    serveDish(lines, mode, () => {
+      open("receipt", lines, fresh, mode);
+      fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
+    });
   }
+
+  // 座位上的盘子：点开重看这一单的小票
+  views.dish = {
+    cls: "book",
+    render: () => views.receipt.render(...state.lastOrder),
+  };
 
   views.receipt = {
     cls: "book",

@@ -90,6 +90,7 @@ window.SHOP_DATA_EN = {
     tablemenu: { title: "Table menu", hint: "Open the full menu" },
     zukan: { title: "Scroll · Fish book", hint: "See the fish you've collected" },
     neko: { title: "Lucky cat", hint: "Give it a pat and draw a fortune" },
+    dish: { title: "Your order", hint: "Take another look at the receipt" },
   },
 
   chef: {
@@ -114,6 +115,5 @@ window.SHOP_DATA_EN = {
     { result: "中吉", text: "Good fish is on its way. The chef's picks are a little rarer." },
     { result: "小吉", text: "Small luck is still luck. How about some salmon?" },
     { result: "吉", text: "A good day to try a fish you've never had." },
-    { result: "末吉", text: "Take your time. The fish book will fill up eventually." },
   ],
 };
