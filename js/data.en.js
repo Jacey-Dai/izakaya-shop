@@ -34,7 +34,7 @@ window.SHOP_DATA_EN = {
   },
 
   categories: {
-    sashimi: "Sashimi", sushi: "Nigiri", hot: "Small dishes", sweet: "Sweets", drinks: "Drinks",
+    sashimi: "Sashimi", sushi: "Nigiri", sets: "Set meals", hot: "Small dishes", sweet: "Sweets", drinks: "Drinks",
   },
 
   menu: {
@@ -53,6 +53,7 @@ window.SHOP_DATA_EN = {
     agedashi: { name: "Agedashi tofu", desc: "Fried tofu in dashi" },
     edamame: { name: "Edamame", desc: "" },
     misoshiru: { name: "Miso soup", desc: "Today: clams" },
+    gohan: { name: "Rice", desc: "New-crop rice" },
     "matcha-ice": { name: "Matcha ice cream", desc: "" },
     warabi: { name: "Warabi mochi", desc: "Kinako + black sugar syrup" },
     sake: { name: "Junmai ginjo sake", desc: "1 gō, chilled" },
@@ -61,6 +62,20 @@ window.SHOP_DATA_EN = {
     matcha: { name: "Matcha", desc: "With a wagashi sweet" },
     yuzu: { name: "Yuzu soda", desc: "Non-alcoholic" },
     hojicha: { name: "Hojicha", desc: "Free refills" },
+  },
+
+  sets: {
+    "set-sashimi": { name: "Sashimi set", desc: "3 of today's fresh fish + rice + miso soup + a small side" },
+    "set-nigiri": { name: "Nigiri set", desc: "6 pieces of the chef's choice today + miso soup + chawanmushi" },
+    "set-tempura": { name: "Tempura set", desc: "A full meal with no raw fish: tempura + rice + miso soup + dessert" },
+    "set-omakase": { name: "Omakase set", desc: "3 fish picked by the chef (maybe a hidden one) + miso soup + dessert + tea. Worth 2 stamps" },
+  },
+
+  prizes: {
+    coupon: { name: "Coupon", desc: "A coupon for your next visit.", line: "A coupon! Bring it next time." },
+    neko: { name: "Cat-petting pass", desc: "You get to pet the shop cat.", line: "A cat-petting pass! Our cat loves people." },
+    plush: { name: "Plush doll", desc: "A little plush of Chef Haruta.", line: "This plush is modelled on me. Look alike?" },
+    feast: { name: "Free meal", desc: "Your next meal is on the house.", line: "The big prize! Your next meal is on me." },
   },
 
   seats: {
@@ -109,6 +124,7 @@ window.SHOP_DATA_EN = {
     omakaseIntro: "Alright, leave it to me.",
     legendary: " …You're lucky today. You don't see this fish often.",
     afterOrder: ["Hai, omachi!", "Enjoy!", "I'm proud of this plate. Give it a try."],
+    drawIntro: "A full card! Thanks for coming so often. Here, give the box a shake.",
     cleared: ["Gochisōsama! I'll take the plate.", "Clean plate! Come again soon.", "Glad you liked it. See you next time."],
   },
 

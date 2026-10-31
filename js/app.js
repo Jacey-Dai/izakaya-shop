@@ -39,7 +39,9 @@
     }
   });
   const itemById = {};
-  D.menu.forEach((cat) => cat.items.forEach((it) => { itemById[it.id] = it; }));
+  D.menu.forEach((cat) => (cat.items || []).forEach((it) => { itemById[it.id] = it; }));
+  const setById = Object.fromEntries(D.sets.map((st) => [st.id, st]));
+  const prizeById = Object.fromEntries(D.prizes.map((p) => [p.id, p]));
 
   // ---------- 语言 ----------
   // 界面文案查 I18N；内容数据中文在 data.js，英文在 data.en.js，缺英文时回退中文
@@ -58,6 +60,9 @@
   const fishText = (f, field) => tx("fish", f.id, field, f[field]);
   const itemName = (it) => (it.fish && it.id.startsWith("s-") ? fishName(fishById[it.fish[0]]) : tx("menu", it.id, "name", it.name));
   const itemDesc = (it) => (it.id.startsWith("s-") ? t("menu.sashimiDesc") : tx("menu", it.id, "desc", it.desc));
+  const setName = (st) => tx("sets", st.id, "name", st.name);
+  const setDesc = (st) => tx("sets", st.id, "desc", st.desc);
+  const prizeText = (p, field) => tx("prizes", p.id, field, p[field]);
   const catName = (c) => (isEn() && EN.categories && EN.categories[c.id]) || c.name;
   const seatName = (s) => tx("seats", s.id, "name", s.name);
   const seatDesc = (s) => tx("seats", s.id, "desc", s.desc);
@@ -91,20 +96,30 @@
     // 小票本（T-53）：最近 20 张小票；来店次数 = 下单次数，供积分卡、常客故事使用
     receipts: store.get("receipts", []),
     visits: store.get("visits", 0),
+    // 积分卡（T-40）：当前章数（0–10）和抽到的奖品 [{ id, at }]
+    stamps: store.get("stamps", 0),
+    prizes: store.get("prizes", []),
     menuTab: "sashimi",
     zukanFilter: "all",
   };
 
-  // 今日鲜货：按日期固定随机，同一天每次打开都一样
-  const todaysFresh = (() => {
+  // 按日期固定的随机数：同一天每次打开都一样。salt 让不同用途各自独立
+  function dailyRand(salt = 0) {
     const d = new Date();
-    let seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-    const rand = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-    const pool = [...menuFish];
+    let seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate() + salt;
+    return () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  }
+  const dailyPick = (list, n, salt) => {
+    const rand = dailyRand(salt);
+    const pool = [...list];
     const out = [];
-    while (out.length < 4 && pool.length) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
+    while (out.length < n && pool.length) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
     return out;
-  })();
+  };
+  // 今日鲜货
+  const todaysFresh = dailyPick(menuFish, 4, 0);
+  // 握寿司定食今天的 3 款（每款一贯两件，共 6 贯）
+  const todaysNigiri = dailyPick(D.menu.find((c) => c.id === "sushi").items.filter((it) => /^[ng]-/.test(it.id)), 3, 7);
 
   // ---------- 小组件 ----------
   // 插画在 art.js：刺身片、握寿司 / 军舰、细卷、木屐盘、外带盒
@@ -472,11 +487,47 @@
   // 订单行的名称和备注在显示时才生成，切换语言后也会跟着变
   function lineName(l) {
     if (l.kind === "item") return itemName(itemById[l.key]);
+    if (l.kind === "set") return setName(setById[l.set]);
     return t(l.kind === "omakase" ? "chef.omakaseName" : "case.plateName");
   }
   function lineNote(l) {
+    if (l.kind === "set") {
+      const fish = (l.nigiri || []).map((id) => itemName(itemById[id]))
+        .concat(l.nigiri ? [] : (l.fish || []).map((id) => fishName(fishById[id])));
+      return fish.concat(setById[l.set].parts.map((id) => itemName(itemById[id]))).join(" · ");
+    }
     if (!l.counts) return "";
     return Object.entries(l.counts).map(([id, n]) => fishName(fishById[id]) + (n > 1 ? "×" + n : "")).join(" · ");
+  }
+
+  // ---------- 定食（T-26） ----------
+  const SET_RATE = 0.85;
+  // 套餐的鱼：omakase 每次点都重新挑，其余按日期固定
+  function setContents(st, omakaseFish) {
+    let fish = [], nigiri = null, base = 0;
+    if (st.pick === "fresh3") { fish = todaysFresh.slice(0, 3); base = fish.reduce((s, f) => s + f.price, 0); }
+    if (st.pick === "daily3") {
+      nigiri = todaysNigiri.map((it) => it.id);
+      fish = todaysNigiri.flatMap((it) => it.fish.map((id) => fishById[id]));
+      base = todaysNigiri.reduce((s, it) => s + it.price, 0);
+    }
+    if (st.pick === "omakase" && omakaseFish) { fish = omakaseFish; base = fish.reduce((s, f) => s + f.price, 0); }
+    base += st.parts.reduce((s, id) => s + itemById[id].price, 0);
+    return { fish, nigiri, base, price: Math.round(base * SET_RATE) };
+  }
+
+  function addSet(id) {
+    const st = setById[id];
+    if (!st) return;
+    const random = st.pick === "omakase";
+    const c = setContents(st, random ? rollOmakase().fish : null);
+    addToCart({
+      // 按日期固定的套餐同一单里合并数量；omakase 套餐每份的鱼不同，分开列
+      key: random ? st.id + "-" + Date.now() : st.id,
+      kind: "set", set: st.id, price: c.price,
+      fish: c.fish.map((f) => f.id),
+      ...(c.nigiri ? { nigiri: c.nigiri } : {}),
+    });
   }
 
   function addMenuItem(id) {
@@ -514,6 +565,8 @@
   body.addEventListener("click", (e) => {
     const add = e.target.closest("[data-add]");
     if (add) { addMenuItem(add.dataset.add); return; }
+    const set = e.target.closest("[data-set]");
+    if (set) { addSet(set.dataset.set); return; }
     const go = e.target.closest("[data-open]");
     if (go) open(go.dataset.open);
   });
@@ -597,7 +650,7 @@
         <div class="tabs">
           ${D.menu.map((c) => `<button class="tab ${c.id === state.menuTab ? "active" : ""}" data-tab="${c.id}">${catName(c)}<small>${c.jp}</small></button>`).join("")}
         </div>
-        <ul class="menu-list">
+        ${cat.id === "sets" ? setListHTML() : `<ul class="menu-list">
           ${cat.items.map((it) => {
             const f = it.fish && fishById[it.fish[0]];
             const got = it.fish && it.fish.every((id) => state.collected.has(id));
@@ -609,7 +662,7 @@
                 <button class="btn add" data-add="${it.id}">${t("menu.order")}</button>
               </li>`;
           }).join("")}
-        </ul>`;
+        </ul>`}`;
     },
     mount: () => {
       $$(".tab", body).forEach((t) => t.addEventListener("click", () => {
@@ -618,6 +671,32 @@
       }));
     },
   };
+
+  function setArt(st, c) {
+    if (st.pick === "daily3") return ART.nigiri(c.fish[0]);
+    if (c.fish.length) return ART.sashimi(c.fish[0], 2);
+    return `<span class="set-badge">${st.pick === "omakase" ? "任" : "定"}</span>`;
+  }
+  function setListHTML() {
+    return `
+      <p class="sub set-note">${t("sets.note")}</p>
+      <ul class="menu-list">
+        ${D.sets.map((st) => {
+          const c = setContents(st);
+          const random = st.pick === "omakase";
+          const today = st.pick === "fresh3" || st.pick === "daily3"
+            ? t("sets.today", { list: c.nigiri ? c.nigiri.map((id) => itemName(itemById[id])).join(t("chef.listSep")) : c.fish.map(fishName).join(t("chef.listSep")) })
+            : "";
+          return `
+            <li class="menu-item set-item">
+              <div class="dish">${setArt(st, c)}</div>
+              <div class="name"><b>${setName(st)}</b><span>${st.jp} · ${setDesc(st)}</span>${today ? `<span class="set-today">${today}</span>` : ""}</div>
+              <span class="price">${random ? t("sets.market") : `<s>${rmb(c.base)}</s> ${rmb(c.price)}`}</span>
+              <button class="btn add" data-set="${st.id}">${t("menu.order")}</button>
+            </li>`;
+        }).join("")}
+      </ul>`;
+  }
 
   // 师傅
   const chefPortrait = () => `
@@ -651,6 +730,7 @@
       if (atCounter && Math.random() < 0.6) line = pick(chefLine("counterExtra"));
       let extra = "";
 
+      if (state.stamps >= STAMP_MAX) line = t("chef.cardFull");
       if (mode === "fresh") {
         line = t("chef.fresh", { list: todaysFresh.map(fishName).join(t("chef.listSep")) });
       }
@@ -680,6 +760,7 @@
               <button class="btn primary" id="chef-omakase">${t("chef.btnOmakase")}</button>
               <button class="btn" data-open="fishcase">${t("chef.btnSelf")}</button>
               <button class="btn" id="chef-fresh">${t("chef.btnFresh")}</button>
+              <button class="btn" data-open="pointcard">${t("card.btn", { n: state.stamps, max: STAMP_MAX })}</button>
             </div>
           </div>
         </div>
@@ -910,7 +991,13 @@
     state.cart = [];
     state.visits += 1;
     store.set("visits", state.visits);
-    state.receipts.unshift({ at: Date.now(), visit: state.visits, mode, seat: mode === "dine" ? state.seat : null, lines: JSON.parse(JSON.stringify(lines)), fresh });
+    // 积分卡：一单一个章，おまかせ套餐多一个；集满 10 个就不再加，等兑换
+    const before = state.stamps;
+    const bonus = Math.max(0, ...lines.filter((l) => l.kind === "set").map((l) => (setById[l.set].stamps || 1) - 1));
+    state.stamps = Math.min(STAMP_MAX, state.stamps + 1 + bonus);
+    store.set("stamps", state.stamps);
+    const stamped = { got: state.stamps - before, have: state.stamps };
+    state.receipts.unshift({ at: Date.now(), visit: state.visits, mode, seat: mode === "dine" ? state.seat : null, lines: JSON.parse(JSON.stringify(lines)), fresh, stamps: stamped.got });
     state.receipts.length = Math.min(state.receipts.length, MAX_RECEIPTS);
     store.set("receipts", state.receipts);
     updateHud();
@@ -918,7 +1005,7 @@
     close();
     serveDish(lines, mode, () => {
       if (current) toast(t("toast.receiptSaved"));
-      else open("receipt", lines, fresh, mode);
+      else open("receipt", lines, fresh, mode, stamped);
       fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
     });
   }
@@ -969,9 +1056,87 @@
   };
 
 
+  // ---------- 积分卡和抽奖（T-40） ----------
+  const STAMP_MAX = 10;
+  function drawPrize() {
+    const total = D.prizes.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total;
+    return D.prizes.find((p) => (r -= p.weight) < 0) || D.prizes[0];
+  }
+  const ticketHTML = (p, n = 0) => `
+    <div class="ticket" style="--tc:${p.color}">
+      <span class="ticket-jp">${p.jp}</span>
+      <b>${prizeText(p, "name")}</b>
+      ${n > 1 ? `<span class="ticket-n">×${n}</span>` : ""}
+    </div>`;
+
+  views.pointcard = {
+    cls: "book",
+    render: () => {
+      const n = state.stamps;
+      const owned = D.prizes.map((p) => [p, state.prizes.filter((w) => w.id === p.id).length]).filter(([, c]) => c);
+      return `
+        <h2>${t("card.title")} <small class="jp">ポイントカード</small></h2>
+        <p class="sub">${t("card.sub", { max: STAMP_MAX })}</p>
+        <div class="stamp-card" role="img" aria-label="${t("card.count", { n, max: STAMP_MAX })}">
+          ${Array.from({ length: STAMP_MAX }, (_, i) => `<span class="stamp-slot ${i < n ? "on" : ""}" style="--r:${(i * 37) % 24 - 12}deg">${i < n ? "舟" : i + 1}</span>`).join("")}
+        </div>
+        <p class="card-count">${t("card.count", { n, max: STAMP_MAX })}</p>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn primary" id="card-draw" ${n < STAMP_MAX ? "disabled" : ""}>${t("card.draw")}</button>
+        </div>
+        ${n < STAMP_MAX ? `<p class="card-hint">${t("card.left", { n: STAMP_MAX - n })}</p>` : ""}
+        <h3>${t("card.prizes")}</h3>
+        ${owned.length ? `<div class="ticket-row">${owned.map(([p, c]) => ticketHTML(p, c)).join("")}</div>` : `<p class="card-hint">${t("card.noPrize")}</p>`}
+        <p class="card-odds">${t("card.odds")}${D.prizes.map((p) => `${prizeText(p, "name")} ${p.weight}%`).join(" · ")}</p>`;
+    },
+    mount: () => {
+      const btn = $("#card-draw", body);
+      btn.addEventListener("click", () => {
+        if (state.stamps < STAMP_MAX) return;
+        // 先定结果再播动画，关掉弹窗也不会丢奖或重抽
+        const p = drawPrize();
+        state.stamps = 0;
+        state.prizes.push({ id: p.id, at: Date.now() });
+        store.set("stamps", 0);
+        store.set("prizes", state.prizes);
+        open("draw", p.id);
+        chefAct("act-bow");
+      });
+    },
+  };
+
+  views.draw = {
+    cls: "book",
+    render: (id) => {
+      const p = prizeById[id];
+      return `
+        <div class="draw">
+          <div class="draw-stage">
+            ${chefPortrait()}
+            <svg class="draw-box" viewBox="0 0 120 120" aria-hidden="true">
+              <rect x="14" y="30" width="92" height="80" rx="6" fill="#c8402e" stroke="#3a2418" stroke-width="5"/>
+              <rect x="40" y="22" width="40" height="12" rx="4" fill="#3a2418"/>
+              <circle cx="60" cy="70" r="20" fill="#f4e6d1" stroke="#3a2418" stroke-width="4"/>
+              <text x="60" y="78" text-anchor="middle" font-size="22" font-weight="700" fill="#3a2418">抽</text>
+            </svg>
+          </div>
+          <div class="bubble">${chefLine("drawIntro")}</div>
+          <div class="prize-reveal" role="status">
+            ${ticketHTML(p)}
+            <p><b>${t("draw.got", { name: prizeText(p, "name") })}</b> ${prizeText(p, "desc")}</p>
+            <div class="bubble">${prizeText(p, "line")}</div>
+            <div class="btn-row" style="justify-content:center">
+              <button class="btn primary" data-open="pointcard">${t("draw.back")}</button>
+            </div>
+          </div>
+        </div>`;
+    },
+  };
+
   views.receipt = {
     cls: "book",
-    render: (lines, fresh, mode = "dine") => {
+    render: (lines, fresh, mode = "dine", stamped = null) => {
       const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
       // 这次点到的鱼：堂食摆在木屐盘上，打包装进外带盒
       const served = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
@@ -987,10 +1152,12 @@
             <p>${t("receipt.new", { n: fresh.length })}</p>
             <div class="unlock-row">${fresh.map((id) => cardHTML(fishById[id], true)).join("")}</div>`
           : `<p>${t("receipt.none")}</p>`}
+          ${stamped ? `<p class="stamp-note">${stamped.got ? t("card.gotStamp", { n: stamped.got, have: stamped.have, max: STAMP_MAX }) : t("card.fullNoStamp")}${stamped.have >= STAMP_MAX ? " " + t("card.goDraw") : ""}</p>` : ""}
           <div class="btn-row" style="justify-content:center">
             <button class="btn primary" data-open="zukan">${t("receipt.zukan")}</button>
             <button class="btn" data-open="chef">${t("receipt.again")}</button>
             <button class="btn" data-open="receipts">${t("receipt.book")}</button>
+            ${stamped ? `<button class="btn" data-open="pointcard">${t("card.title")}</button>` : ""}
           </div>
         </div>`;
     },

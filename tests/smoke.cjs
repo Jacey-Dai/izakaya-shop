@@ -129,10 +129,25 @@ const root = path.resolve(__dirname, '..');
     await page.locator('#hud-receipts').click(); assert.equal(await page.locator('.receipt-row').count(),1);
     await page.locator('.receipt-row').first().click(); assert.equal(await page.locator('.receipt-meta').isVisible(),true); await close();
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.visits'))),1);
+    // T-26/T-40: set meals; each order earns a stamp and the omakase set earns one more.
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.stamps'))),1);
+    await open('tablemenu'); await page.locator('[data-tab="sets"]').click(); assert.equal(await page.locator('.set-item').count(),4);
+    await page.locator('[data-set="set-omakase"]').click(); await page.locator('[data-set="set-sashimi"]').click(); await close();
+    await page.locator('#hud-cart').click(); assert.equal(await page.locator('.cart-line').count(),2);
+    await page.locator('#cart-submit').click(); await page.locator('.receipt .stamp-note').waitFor({timeout:4000});
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.stamps'))),3); await close();
     const collected = await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.zukan')));
     assert.ok(collected.length>=2);
     await page.reload(); await loaded(); assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.zukan')).length),collected.length);
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.guest')).clothing),'kimono');
+    // T-40: a full card lets you draw once with Haruta, then the card starts over.
+    await page.evaluate(()=>localStorage.setItem('kobune.stamps','10')); await page.reload(); await loaded();
+    await open('chef'); await page.locator('[data-open="pointcard"]').click(); assert.equal(await page.locator('.stamp-slot.on').count(),10);
+    await page.locator('#card-draw').click(); await page.locator('.prize-reveal .ticket').waitFor({timeout:3000}); await page.waitForTimeout(1800); await shot('prize-draw');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.stamps'))),0);
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('kobune.prizes')).length),1);
+    await page.locator('.prize-reveal [data-open="pointcard"]').click(); assert.equal(await page.locator('#card-draw').isDisabled(),true);
+    assert.equal(await page.locator('.ticket-row .ticket').count(),1); await shot('pointcard'); await close();
     assert.equal(await page.locator('#hud-cart b').innerText(),'0');
     await shot('seated');
     await page.locator('#hud-zukan').click(); await page.locator('.card:not(.locked)').first().click(); assert.equal(await page.locator('.facts').isVisible(),true); await close();
@@ -193,6 +208,6 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('.steam').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.room-layer.is-active').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
-    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, stool vs tatami sitting pose, mobile views, reduced motion.');
+    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, set meals, points card and prize draw, stool vs tatami sitting pose, mobile views, reduced motion.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
