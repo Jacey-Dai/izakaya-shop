@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Yuji+Syuku&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <!-- 发布 CSS / JS 改动时同步递增资源版本，避免新 HTML 混用旧缓存。 -->
-  <link rel="stylesheet" href="css/style.css?v=20261030-4">
+  <link rel="stylesheet" href="css/style.css?v=20261031-1">
 </head>
 <body>
   <header class="hud">
@@ -29,15 +29,14 @@
   </header>
 
   <main class="stage">
-    <p class="hint" data-i18n="hint">将鼠标移到店内各处探索，点击即可互动</p>
-
-    <div class="room-bar">
-      <p id="room-status" aria-live="polite"></p>
+    <p id="room-status" class="sr-only" aria-live="polite"></p>
+    <div class="room-bar" hidden>
       <button class="room-return" id="back-counter" hidden data-i18n="room.back">回到吧台席</button>
     </div>
     <div class="scene-scroll">
       <svg class="scene" viewBox="0 0 1200 800" role="group" aria-label="小舟店内">
         <defs>
+          <clipPath id="board-writing-clip"><rect x="10" y="10" width="80" height="108"/></clipPath>
           <clipPath id="chef-counter-mask"><rect x="515" y="175" width="220" height="294"/></clipPath>
           <radialGradient id="lamp-light"><stop stop-color="#ffe3a3" stop-opacity=".32"/><stop offset="1" stop-color="#ffe3a3" stop-opacity="0"/></radialGradient>
           <linearGradient id="guest-cloth"><stop stop-color="#fff" stop-opacity=".28"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#201e2a" stop-opacity=".25"/></linearGradient>
@@ -52,7 +51,7 @@
         <g class="steam" pointer-events="none" fill="none" stroke="#fff8e9" stroke-width="3" stroke-linecap="round"><path d="M365 343 q-12 -14 0 -27 t0 -27"/><path d="M387 351 q12 -14 0 -27 t0 -27"/></g>
         <!-- 热点保留原有 data-id，轮廓随真实物体定位；非悬停时不遮挡美术。 -->
         <g class="hotspot" data-id="noren"><path class="hit-area" fill="transparent" stroke="transparent" d="M18 112 L205 148 L205 583 L18 625 Z"/><text class="room-sign" x="115" y="245">小 舟</text></g>
-        <g class="hotspot" data-id="board"><path class="hit-area" fill="transparent" stroke="transparent" d="M170 546 L287 530 L307 719 L157 729 Z"/><text class="room-sign board-sign" x="230" y="585">本日の鮮魚</text><circle class="hotspot-dot" opacity="0" cx="230" cy="659" r="7"/></g>
+        <g class="hotspot" data-id="board"><path class="hit-area" fill="transparent" stroke="transparent" d="M170 546 L287 530 L307 719 L157 729 Z"/><g class="board-lettering" transform="matrix(.98 -.10 -.065 1 177 557)" clip-path="url(#board-writing-clip)" aria-hidden="true"><text x="50" y="28" textLength="76" lengthAdjust="spacingAndGlyphs">本日の鮮魚</text><path d="M17 37 Q48 35 83 37"/></g><circle class="hotspot-dot" opacity="0" cx="230" cy="659" r="7"/></g>
         <g class="hotspot" data-id="tags"><rect class="hit-area" fill="transparent" stroke="transparent" x="395" y="125" width="222" height="109" rx="8"/><g class="menu-lettering"><text x="417" y="151">天ぷら</text><text x="454" y="151">焼き鳥</text><text x="490" y="151">茶碗蒸</text><text x="527" y="151">枝豆</text><text x="564" y="151">甘味</text></g></g>
         <g class="hotspot" data-id="drinks"><rect class="hit-area" fill="transparent" stroke="transparent" x="715" y="118" width="196" height="281" rx="10"/><circle class="hotspot-dot" opacity="0" cx="800" cy="305" r="7"/></g>
         <g class="hotspot" data-id="zukan"><rect class="hit-area" fill="transparent" stroke="transparent" x="1040" y="90" width="100" height="275" rx="10"/><circle class="hotspot-dot" opacity="0" cx="1090" cy="337" r="7"/></g>
@@ -82,14 +81,6 @@
         <g id="guest" class="hotspot" data-id="guest" style="display:none"></g>
       </svg>
     </div>
-    <nav class="scene-shortcuts" aria-label="店内探索 / Explore the shop">
-      <button data-open="tablemenu" data-i18n="scene.menu">翻开菜单</button>
-      <button data-open="fishcase" data-i18n="scene.fish">自选鱼生</button>
-      <button data-open="chef" data-i18n="scene.chef">和春田聊聊</button>
-      <button data-open="neko" data-i18n="scene.luck">抽一支签</button>
-    </nav>
-    <p class="scene-caption" data-i18n="scene.caption">一盏暖灯，一碗热饭。今晚，慢慢来。</p>
-
     <!-- 食物插画上很淡的纸张颗粒（art.js） -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
       <filter id="kb-grain" x="0" y="0" width="100%" height="100%">
@@ -113,10 +104,10 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script src="js/i18n.js?v=20261030-4"></script>
-  <script src="js/data.js?v=20261030-4"></script>
-  <script src="js/data.en.js?v=20261030-4"></script>
-  <script src="js/art.js?v=20261030-4"></script>
-  <script src="js/app.js?v=20261030-4"></script>
+  <script src="js/i18n.js?v=20261031-1"></script>
+  <script src="js/data.js?v=20261031-1"></script>
+  <script src="js/data.en.js?v=20261031-1"></script>
+  <script src="js/art.js?v=20261031-1"></script>
+  <script src="js/app.js?v=20261031-1"></script>
 </body>
 </html>

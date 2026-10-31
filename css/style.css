@@ -72,7 +72,6 @@ button { font: inherit; cursor: pointer; }
 
 /* ---------- 场景 ---------- */
 .stage { max-width: 1200px; margin: 0 auto; padding: 0 16px 32px; position: relative; }
-.hint { color: var(--sumi-soft); opacity: 1; font-size: 13px; text-align: center; margin: 0 0 8px; }
 .scene {
   display: block; width: 100%; height: auto;
   border-radius: var(--radius);
@@ -411,6 +410,12 @@ button { font: inherit; cursor: pointer; }
 }
 .toast.gold { background: linear-gradient(90deg, #8a6418, #c9962a); }
 
+/* 房间名称仅供辅助技术播报，页面不再显示说明条。 */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.board-lettering { pointer-events: none; }
+.board-lettering text { font-family: var(--font-chalk); font-size: 12px; font-weight: 600; fill: #eee8ce; fill-opacity: .9; text-anchor: middle; }
+.board-lettering path { fill: none; stroke: #e4dfc9; stroke-width: .65; stroke-linecap: round; opacity: .45; }
+
 /* ---------- 前景客人：与师傅一致的微缩玩偶素材 ---------- */
 .guest-doll { isolation: isolate; }
 .guest-doll-art, .guest-accessory { pointer-events: none; }
@@ -420,8 +425,8 @@ button { font: inherit; cursor: pointer; }
 .guest-wrap { grid-template-columns: 220px minmax(0, 1fr); }
 
 /* ---------- 随座位切换的完整房间视角 ---------- */
-.room-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 2px 12px; min-height: 36px; }
-.room-bar p { margin: 0; color: #78654e; font-family: var(--font-chalk); font-size: 14px; letter-spacing: .07em; }
+.room-bar { display: flex; justify-content: flex-end; margin: 0 2px 12px; }
+.room-bar[hidden] { display: none; }
 .room-return { border: 1px solid #c9b391; background: #fff8eb; border-radius: 999px; padding: 7px 16px; color: var(--sumi); font-size: 13px; box-shadow: 0 2px 0 #dac5a6; }
 .room-return[hidden] { display: none; }
 .room-layer.is-active { animation: room-arrive .55s ease-out; }
@@ -429,7 +434,6 @@ button { font: inherit; cursor: pointer; }
 @media (max-width: 600px) {
   .scene[data-room="tatami"] { width: 100%; }
   .room-bar { align-items: flex-start; }
-  .room-bar p { font-size: 12px; letter-spacing: 0; }
   .room-return { padding: 6px 10px; font-size: 11px; flex-shrink: 0; }
 }
 
@@ -440,7 +444,6 @@ button { font: inherit; cursor: pointer; }
 .brand p { color: var(--sumi-soft); opacity: 1; }
 .hud-btn { box-shadow: 0 3px 0 #d7c4a6; min-height: 42px; }
 .hud-cart:hover { background: #934831; }
-.hint { margin: 0 0 14px; letter-spacing: .08em; }
 .scene-scroll { border-radius: 22px; overflow: hidden; box-shadow: 0 16px 44px #76502f26; }
 .scene { border-radius: 0; }
 .room-art { pointer-events: none; }
@@ -451,12 +454,7 @@ button { font: inherit; cursor: pointer; }
 .hotspot-dot { fill: #fff3ce; stroke: #a76d3d; stroke-width: 2; opacity: 0; transition: opacity .25s; pointer-events: none; }
 .hotspot:hover .hotspot-dot, .hotspot:focus-visible .hotspot-dot, .hotspot.linked .hotspot-dot { opacity: 1; }
 .room-sign { font-family: var(--font-brush); fill: #fff2d6; font-size: 27px; text-anchor: middle; pointer-events: none; letter-spacing: 3px; }
-.board-sign { font-family: var(--font-chalk); font-size: 17px; transform: rotate(-5deg); transform-origin: 230px 585px; }
 .menu-lettering { pointer-events: none; fill: #68462f; font-size: 14px; font-family: var(--font-brush); writing-mode: vertical-rl; letter-spacing: 3px; }
-.scene-shortcuts { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 22px 0 12px; }
-.scene-shortcuts button { border: 1px solid #dcc7a8; border-radius: 999px; background: #fff9ee; color: var(--sumi); padding: 10px 20px; box-shadow: 0 3px 0 #deccb0; transition: transform .2s, background .2s; }
-.scene-shortcuts button:hover { transform: translateY(-2px); background: #f7e7cb; }
-.scene-caption { color: var(--sumi-soft); text-align: center; font-size: 13px; letter-spacing: .08em; margin: 20px 0 0; }
 .ambient-light { animation: lantern-glow 6s ease-in-out infinite; }
 @keyframes lantern-glow { 50% { opacity: .45; } }
 .chef-idle { transform-origin: 628px 450px; animation: chef-breathe 5s ease-in-out infinite; }
@@ -489,12 +487,8 @@ button:focus-visible, .link:focus-visible { outline: 3px solid #686d50; outline-
   .hud-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 6px; }
   .hud-btn { padding: 8px 9px; font-size: 12px; }
   .stage { padding: 0 12px 24px; }
-  .hint { font-size: 11px; letter-spacing: 0; }
   .scene-scroll { overflow-x: auto; border-radius: 16px; -webkit-overflow-scrolling: touch; }
   .scene { width: 840px; max-width: none; }
-  .scene-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
-  .scene-shortcuts button { padding: 10px 8px; font-size: 12px; }
-  .scene-caption { font-size: 11px; letter-spacing: 0; }
   .builder, .chef-wrap, .detail, .guest-wrap { min-width: 0; }
   .progress { min-width: 0; width: 100%; }
   .facts { grid-template-columns: 75px minmax(0, 1fr); }

@@ -45,6 +45,9 @@ const root = path.resolve(__dirname, '..');
       return safe && dotsHidden;
     });
     assert.equal(fallback, true);
+    assert.equal(await page.locator('.hint, .scene-shortcuts, .scene-caption').count(),0);
+    assert.equal(await page.locator('#room-status').getAttribute('class'),'sr-only');
+    assert.equal(await page.locator('.room-bar').isHidden(),true);
     await shot('desktop');
     // All object entry points remain interactive, localized, and escapable.
     for (const lang of ['en', 'zh']) {
@@ -80,6 +83,17 @@ const root = path.resolve(__dirname, '..');
       for(const value of values) {await page.locator('[data-k="'+key+'"][data-v="'+value+'"]').click();colors.add(await visualHash());}
       assert.equal(colors.size,values.length,'All '+key+' choices must visibly change the doll');
     }
+    // Hat crown occludes upper hair for every hairstyle/outfit, without hiding long tails.
+    await page.locator('[data-k="accessory"][data-v="hat"]').click();
+    for(const clothing of ['casual','kimono','yukata']) {
+      await page.locator('[data-k="clothing"][data-v="'+clothing+'"]').click();
+      for(const hair of ['short','bun','ponytail','long']) {
+        await page.locator('[data-k="hairStyle"][data-v="'+hair+'"]').click();
+        assert.equal(await page.locator('.guest-preview .guest-hat').getAttribute('data-fit'),hair);
+        assert.ok(await page.locator('.guest-preview .guest-hat-clearance').getAttribute('clip-path'));
+        if(clothing==='casual') await page.locator('.guest-preview').screenshot({path:'/tmp/kobune-hat-'+hair+'.png'});
+      }
+    }
     await page.locator('[data-k="clothing"][data-v="kimono"]').click();
     await page.locator('[data-k="outfit"][data-v="sakura"]').click();
     await page.locator('[data-k="accessory"][data-v="kanzashi"]').click();
@@ -90,7 +104,7 @@ const root = path.resolve(__dirname, '..');
     await page.locator('[data-k="accessory"][data-v="none"]').click();
     await close();
     await page.waitForTimeout(300);await shot('doll-counter');
-    await page.locator('.scene-shortcuts [data-open="tablemenu"]').click(); await page.locator('[data-add]').first().click(); await close();
+    await open('tablemenu'); await page.locator('[data-add]').first().click(); await close();
     await open('fishcase'); const fishId = await page.locator('[data-fish]').nth(1).getAttribute('data-fish');
     for(let i=0;i<7;i++) await page.locator('[data-fish="'+fishId+'"]').click();
     assert.equal(await page.locator('.portion').count(),6);
@@ -110,11 +124,11 @@ const root = path.resolve(__dirname, '..');
     await shot('seated');
     await page.locator('#hud-zukan').click(); await page.locator('.card:not(.locked)').first().click(); assert.equal(await page.locator('.facts').isVisible(),true); await close();
     // Live language change with an open modal.
-    await open('fishcase'); await page.locator('#lang-toggle').click(); assert.equal(await page.locator('.scene-shortcuts button').first().innerText(),'翻开菜单'); await close();
+    await open('fishcase'); await page.locator('#lang-toggle').click(); assert.equal(await page.locator('html').getAttribute('lang'),'zh-CN'); await close();
     // Fresh context: takeout needs no selected seat.
     const fresh = await browser.newContext({locale:'en-US'}); const take=await fresh.newPage();take.on('pageerror',e=>errors.push(e.message));
     await take.goto(pathToFileURL(path.join(root,'index.html')).href);
-    await take.locator('.scene-shortcuts [data-open="tablemenu"]').click();await take.locator('[data-add]').first().click();await take.keyboard.press('Escape');
+    await take.locator('.scene [data-id="tablemenu"]:visible').click();await take.locator('[data-add]').first().click();await take.keyboard.press('Escape');
     await take.locator('#hud-cart').click(); await take.locator('[data-mode="takeout"]').click();await take.locator('#cart-submit').click();
     assert.equal(await take.locator('.art-takeout').isVisible(),true); await fresh.close();
     // Tatami camera follows the existing saved seat, preserves orders and all entry points.

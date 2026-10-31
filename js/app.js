@@ -147,11 +147,22 @@
       return rgb.map((c) => `${.2126 * c * 1.8} ${.7152 * c * 1.8} ${.0722 * c * 1.8} 0 ${c * .025}`).join(" ") + " 0 0 0 1 0";
     };
     const accessory = opt("accessory").id;
+    // 帽沿按发型单独适配，并裁掉帽冠内的头发，避免发束穿出帽子。
+    const hatFits = {
+      short: { width: 156, height: 108, lift: 24, cx: 0 },
+      bun: { width: 148, height: 102, lift: 18, cx: -2 },
+      ponytail: { width: 150, height: 104, lift: 20, cx: 2 },
+      long: { width: 160, height: 111, lift: 22, cx: 0 },
+    };
+    const hat = hatFits[style];
+    const brimY = -height - hat.lift + hat.height * .73;
     let extra = "";
-    if (accessory === "hat") extra = `<svg class="guest-accessory" x="-72" y="${-height - 3}" width="144" height="100" viewBox="43 153 881 614" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
+    if (accessory === "hat") extra = `<svg class="guest-accessory guest-hat" data-fit="${style}" x="${hat.cx - hat.width / 2}" y="${-height - hat.lift}" width="${hat.width}" height="${hat.height}" viewBox="43 153 881 614" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
     if (accessory === "kanzashi") extra = `<svg class="guest-accessory" x="16" y="${-height + 30}" width="58" height="48" viewBox="1020 178 713 584" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
     return `<g class="guest-doll" data-hair="${style}" data-clothing="${wear}" data-outfit="${opt("outfit").id}" data-hair-color="${opt("hairColor").id}" data-accessory="${accessory}">
       <ellipse cx="0" cy="-2" rx="${wear === "kimono" ? 76 : 58}" ry="7" fill="#36281d" opacity=".22"/>
+      ${accessory === "hat" ? `<defs><clipPath id="${id}-hat-clearance" clipPathUnits="userSpaceOnUse"><path d="M-125 ${brimY} Q${hat.cx} ${brimY + hat.height * .28} 125 ${brimY} V20 H-125 Z"/></clipPath></defs>` : ""}
+      <g class="guest-hat-clearance" ${accessory === "hat" ? `clip-path="url(#${id}-hat-clearance)"` : ""}>
       <svg class="guest-doll-art" x="-110" y="${-height}" width="220" height="${height}" viewBox="${x - 5} ${y - 3} ${w + 10} ${h + 6}" overflow="hidden">
         <defs>
           <image id="${id}-sprite" href="assets/art/guest-dolls.webp" x="${-col * 384}" y="${-row * 1024 / 3}" width="1536" height="1024"/>
@@ -171,6 +182,7 @@
           <g mask="url(#${id}-hair-mask)"><use href="#${id}-sprite" filter="url(#${id}-hair)"/></g>
         </g>
       </svg>
+      </g>
       ${extra}
       <path class="guest-hit" d="M0 ${-height - 5} C-86 ${-height - 5} -86 ${-height + 115} 0 ${-height + 115} C86 ${-height + 115} 86 ${-height - 5} 0 ${-height - 5} Z M-42 -115 Q-78 -95 -${wear === "kimono" ? 90 : 73} -30 Q-85 10 0 2 Q85 10 ${wear === "kimono" ? 90 : 73} -30 Q78 -95 42 -115 Z" fill="transparent" stroke="transparent"/>
     </g>`;
@@ -206,6 +218,7 @@
     });
     $("#room-status").textContent = t("room." + room);
     $("#back-counter").hidden = room !== "tatami";
+    $(".room-bar").hidden = room !== "tatami";
     if (changed) {
       $("#tooltip").hidden = true;
       $$(".hotspot.linked").forEach((el) => el.classList.remove("linked"));
@@ -314,7 +327,7 @@
     const go = e.target.closest("[data-open]");
     if (go) open(go.dataset.open);
   });
-  $$(".hud [data-open], .scene-shortcuts [data-open]").forEach((b) => b.addEventListener("click", () => open(b.dataset.open)));
+  $$(".hud [data-open]").forEach((b) => b.addEventListener("click", () => open(b.dataset.open)));
 
   // ---------- 各个视图 ----------
   const views = {};
