@@ -191,5 +191,58 @@ window.KOBUNE_ART = (() => {
       ${piece(30, false)}${piece(78, true)}${piece(126, false)}</g>`, "art art-tamago");
   }
 
-  return { sashimi, nigiri, maki, geta, takeoutBox, tamagoyaki, slicePiece, OUTLINE: T.ol };
+  // ---------- 节日装饰（T-55）：原点在底部中心，向上画；直接放进场景 SVG ----------
+  const DECO = {
+    // 正月门松：三根斜切竹 + 松枝 + 草绳底座
+    kadomatsu: () => `
+      <path d="M-34 -28 Q-40 -60 -30 -68 Q-14 -76 0 -66 Q16 -78 32 -66 Q40 -56 34 -28 Z" fill="#3f6b3a" ${OL()}/>
+      <path d="M-24 -62 q-6 -10 2 -14 M20 -64 q8 -8 0 -14 M-2 -70 q2 -10 -6 -12" stroke="#2c4f2a" stroke-width="3" fill="none"/>
+      <rect x="-22" y="-128" width="14" height="100" fill="#7fb04a" ${OL()}/>
+      <path d="M-22 -128 L-8 -140 L-8 -128 Z" fill="#cfe39a" ${OL()}/>
+      <rect x="-7" y="-150" width="14" height="122" fill="#8cbc52" ${OL()}/>
+      <path d="M-7 -150 L7 -164 L7 -150 Z" fill="#d8eaa6" ${OL()}/>
+      <rect x="8" y="-116" width="14" height="88" fill="#7fb04a" ${OL()}/>
+      <path d="M8 -116 L22 -128 L22 -116 Z" fill="#cfe39a" ${OL()}/>
+      <path d="M-22 -100 h14 M-7 -112 h14 M8 -90 h14" stroke="#5d8a35" stroke-width="2"/>
+      <path d="M-36 -30 L36 -30 L32 0 L-32 0 Z" fill="#d9b26a" ${OL()}/>
+      <path d="M-34 -20 L34 -20 M-33 -10 L33 -10" stroke="#a5793a" stroke-width="2.5"/>
+      <path d="M-6 -30 v30 M6 -30 v30" stroke="#c0392b" stroke-width="3"/>`,
+    // 七夕：竹枝挂彩色短册和纸星星
+    tanabata: () => {
+      const strips = [[-34, -200, "#e86a5c"], [26, -214, "#f2c14e"], [-20, -160, "#6a9bd8"], [34, -170, "#f0a8b8"], [-40, -120, "#9ac46a"], [18, -128, "#e86a5c"], [-8, -236, "#6a9bd8"]];
+      return `
+      <rect x="-5" y="-260" width="10" height="260" rx="3" fill="#7fb04a" ${OL()}/>
+      <path d="M-5 -200 h10 M-5 -140 h10 M-5 -80 h10" stroke="#5d8a35" stroke-width="2"/>
+      ${[[-1, -230], [1, -190], [-1, -150], [1, -110]].map(([dir, y]) => `<path d="M0 ${y} q${dir * 30} -10 ${dir * 52} 6 q${dir * -26} 4 ${dir * -52} -6 Z" fill="#6aa04a" ${OL()}/>`).join("")}
+      ${strips.map(([x, y, c]) => `<line x1="${x + 4}" y1="${y - 10}" x2="${x + 4}" y2="${y}" stroke="${T.ol}" stroke-width="1"/><rect class="sway" x="${x}" y="${y}" width="9" height="30" fill="${c}" ${OL()}/>`).join("")}
+      <path d="M40 -240 l4 9 l10 1 l-8 6 l3 10 l-9 -6 l-9 6 l3 -10 l-8 -6 l10 -1 Z" fill="#f6d55c" ${OL()}/>`;
+    },
+    // 万圣节：笑脸南瓜灯
+    pumpkin: () => `
+      <ellipse cx="0" cy="-26" rx="38" ry="27" fill="#e8892e" ${OL()}/>
+      <path d="M-12 -52 Q0 -46 12 -52 M-14 -2 Q0 -6 14 -2" stroke="#b5601c" stroke-width="2.5" fill="none"/>
+      <path d="M-14 -52 Q-18 -26 -14 -1 M14 -52 Q18 -26 14 -1" stroke="#c96d22" stroke-width="2.5" fill="none"/>
+      <path d="M-3 -52 q-2 -12 8 -16" stroke="#5d7a35" stroke-width="5" stroke-linecap="round" fill="none"/>
+      <path d="M-22 -34 l8 -9 l8 9 Z M6 -34 l8 -9 l8 9 Z" fill="#ffd96a" stroke="#7a3f12" stroke-width="1.5"/>
+      <path d="M-18 -20 Q0 -6 18 -20 Q0 -12 -18 -20 Z" fill="#ffd96a" stroke="#7a3f12" stroke-width="1.5"/>
+      <ellipse class="deco-glow" cx="0" cy="-26" rx="54" ry="40" fill="url(#lamp-light)"/>`,
+    // 圣诞：小盆栽圣诞树
+    tree: () => `
+      <path d="M-14 0 L-18 -20 L18 -20 L14 0 Z" fill="#b5653a" ${OL()}/>
+      <path d="M0 -100 L-30 -54 L-18 -54 L-38 -20 L38 -20 L18 -54 L30 -54 Z" fill="#4f8a46" ${OL()}/>
+      <path d="M-22 -40 Q0 -30 22 -42 M-14 -70 Q0 -62 14 -72" stroke="#f6d55c" stroke-width="2" fill="none"/>
+      ${[[-16, -30, "#e86a5c"], [12, -36, "#6a9bd8"], [-6, -58, "#f6d55c"], [10, -64, "#e86a5c"], [0, -84, "#f0a8b8"], [22, -26, "#f6d55c"]].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}" ${OL()}/>`).join("")}
+      <path d="M0 -114 l4 9 l10 1 l-8 6 l3 10 l-9 -6 l-9 6 l3 -10 l-8 -6 l10 -1 Z" fill="#f6d55c" ${OL()}/>`,
+    // 下雨天（T-56）：靠在门口的湿雨伞
+    umbrella: () => `
+      <path d="M0 0 L-2 -12" stroke="${T.ol}" stroke-width="3" stroke-linecap="round"/>
+      <path d="M-2 -12 Q-14 -60 -10 -118 L6 -118 Q12 -60 -2 -12 Z" fill="#41557e" ${OL()}/>
+      <path d="M-6 -20 Q-10 -70 -6 -116 M2 -24 Q4 -70 2 -116" stroke="#2f3f60" stroke-width="1.5" fill="none"/>
+      <rect x="-9" y="-62" width="14" height="5" rx="2" fill="#c0392b"/>
+      <path d="M-2 -118 L-2 -150 Q-2 -160 8 -160 Q16 -160 16 -152" stroke="#8a5a32" stroke-width="4" stroke-linecap="round" fill="none"/>
+      <ellipse cx="2" cy="2" rx="18" ry="4" fill="#7fa6c8" opacity=".45"/>`,
+  };
+  const deco = (kind) => (DECO[kind] ? DECO[kind]() : "");
+
+  return { sashimi, nigiri, maki, geta, takeoutBox, tamagoyaki, deco, slicePiece, OUTLINE: T.ol };
 })();

@@ -71,6 +71,14 @@ window.SHOP_DATA_EN = {
     "set-omakase": { name: "Omakase set", desc: "3 fish picked by the chef (maybe a hidden one) + miso soup + dessert + tea. Worth 2 stamps" },
   },
 
+  festivals: {
+    shogatsu: { name: "New Year", line: "Happy New Year! Please look after me this year too. I tied the kadomatsu by the door myself." },
+    sakura: { name: "Cherry blossoms", line: "The cherry trees are in bloom. Sea bream is in season, lovely with sakura salt." },
+    tanabata: { name: "Tanabata", line: "Tanabata is coming. Want to hang a wish on the bamboo?" },
+    halloween: { name: "Halloween", line: "The kids next door helped carve the pumpkin. Trick or treat? Have some warabi mochi." },
+    christmas: { name: "Christmas", line: "Merry Christmas! Sushi counts as a present, right?" },
+  },
+
   prizes: {
     coupon: { name: "Coupon", desc: "A coupon for your next visit.", line: "A coupon! Bring it next time." },
     neko: { name: "Cat-petting pass", desc: "You get to pet the shop cat.", line: "A cat-petting pass! Our cat loves people." },
@@ -124,6 +132,7 @@ window.SHOP_DATA_EN = {
     omakaseIntro: "Alright, leave it to me.",
     legendary: " …You're lucky today. You don't see this fish often.",
     afterOrder: ["Hai, omachi!", "Enjoy!", "I'm proud of this plate. Give it a try."],
+    rainy: ["Raining out there? Have some hot hojicha first.", "Rainy days call for something warm: miso soup, chawanmushi, agedashi tofu.", "Leave your umbrella by the door, I'll keep an eye on it."],
     drawIntro: "A full card! Thanks for coming so often. Here, give the box a shake.",
     cleared: ["Gochisōsama! I'll take the plate.", "Clean plate! Come again soon.", "Glad you liked it. See you next time."],
   },

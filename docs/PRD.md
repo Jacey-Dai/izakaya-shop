@@ -9,7 +9,7 @@
 | 产品负责人 | Jacey（所有产品决策由 Jacey 拍板） |
 | 仓库 | https://github.com/Jacey-Dai/izakaya-shop |
 | 线上地址 | https://jacey-dai.github.io/izakaya-shop/ （Jacey 2026-10-31 已开启 GitHub Pages） |
-| 当前版本 | v0.2.5（拍照模式；生日彩蛋；离线可用） |
+| 当前版本 | v0.2.6（节日装饰；下雨天） |
 | 文档更新 | 2026-10-31 |
 
 ---
@@ -218,6 +218,9 @@ Set（定食，T-26）：`{ id, name, jp, desc, parts: MenuItem.id[], pick?, sta
 - `hotspots`：`{ [data-id]: { title, hint } }`
 - `chef`：`greetings[]`、`counterExtra[]`、`omakaseIntro`、`legendary`、`afterOrder[]`
 - `omikuji`：`{ result, text, luck: 0–3 }[]`
+- `festivals`（T-55）：`{ id, name, from: "MM-DD", to: "MM-DD", deco, line }[]`，日期含首尾；`deco` 是 `art.js` 的 `KOBUNE_ART.deco(kind)`（kadomatsu / tanabata / pumpkin / tree）或 `petals`；摆放坐标在 `app.js` 的 `DECO_SPOTS`。英文在 `data.en.js` 的 `festivals`。
+- `rain`（T-56）：`{ chance, juneChance }`，下雨概率；`chef.rainy[]` 是雨天台词。
+- URL 预览参数：`?date=YYYY-MM-DD`（节日和天气按这天算）、`?weather=rain|clear`。
 - `prizes`（T-40）：`{ id, name, jp, weight, color, desc, line }[]`，`weight` 是百分比概率（Q11 暂定，Jacey 可改），`line` 是春田抽中时说的话。英文在 `data.en.js` 的 `prizes`。`chef.drawIntro` 是抽奖开场白。
 - `chefLooks`：`{ id, name }[]`，为 T-10 预留的男女配置；当前运行时仅男性春田。英文在 `data.en.js` 的 `chefLooks`。
 
@@ -461,8 +464,8 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | T-52 | 首批细化动作：春田切鱼（手持刀上下）、捏寿司（双手合拢）、客人吃一贯（筷子送到嘴边）、眨眼；加动作队列，不互相打断 | 待做 | T-51 | `app.js`、`css/` | 每个动作 ≤ 2 秒；减少动态效果时关闭；不挡点击 |
 | T-53 | 小票本：保存最近 20 张小票，可翻看、分享，记录来店次数（供 T-28 / T-40 使用）。入口：顶栏「小票本」和小票上的按钮；详情可复制成文字 | 完成（@Claude/feat/T-60-T-53-receipts） | — | `app.js`、存档表 | 刷新后仍在；上菜中打开的弹窗不再被小票顶掉 |
 | T-54 | 拍照模式：把当前场景和自己的玩偶存成一张带店名、日期的图片。顶栏「拍照」：复制场景 SVG（图片转 data URL、样式写进属性）画到 1280×960 Canvas，下方加店名、日期、座位和「舟」印章；可保存 PNG，支持的浏览器可直接分享。`file://` 打开时浏览器不允许读本地图片，会提示用线上地址 | 完成（@Claude/feat/T-54-T-58-T-59） | — | `app.js`（Canvas） | 吧台、座敷都能拍；中英文水印 |
-| T-55 | 节日装饰：正月门松、春天樱花、七夕风铃、圣诞小树等，按真实日期自动出现 | 待做 | — | `assets/`、`data.js`（`festivals`） | 可用 `?date=` 预览 |
-| T-56 | 下雨天：窗外下雨、暖帘水珠，春田推荐热茶和热菜；随机或按日期出现 | 待做 | T-21 | `css/`、`app.js` | 减少动态效果时只显示静态雨景 |
+| T-55 | 节日装饰：正月门松、春天樱花、七夕风铃、圣诞小树等，按真实日期自动出现。已做：正月门松（1/1–1/7）、赏樱飘花瓣（3/25–4/10）、七夕竹枝短册（7/1–7/7）、万圣节南瓜灯（10/25–10/31，Claude 加的，Jacey 不要可以删）、圣诞小树（12/18–12/25）；吧台和座敷各有摆放位置，不挡热点；春田那几天有应景台词，进店有提示 | 完成（@Claude/feat/T-55-T-56-festivals-rain） | — | `assets/`、`data.js`（`festivals`） | 可用 `?date=` 预览 |
+| T-56 | 下雨天：窗外下雨、暖帘水珠，春田推荐热茶和热菜；随机或按日期出现。已做：按日期固定随机（平时约 18%，6 月梅雨约 40%），`?weather=rain / clear` 预览；吧台的门边障子、座敷的院子窗户有雨，暖帘下摆滴水，门口靠一把湿雨伞；春田说热茶热菜的台词。没等 T-21 昼夜，以后做昼夜时雨景跟着调暗 | 完成（@Claude/feat/T-55-T-56-festivals-rain） | — | `css/`、`app.js` | 减少动态效果时只显示静态雨景 |
 | T-57 | 会动的店猫：偶尔走过吧台、在座垫上睡觉，点它会叫一声 | 待做 | — | `assets/art/`、`app.js` | 不挡其他热点 |
 | T-58 | 生日彩蛋：客人填生日后，当天进店春田端上带蜡烛的玉子烧。生日在换装弹窗里选（月 / 日）；当天坐下、没有别的盘子、没有弹窗时端上，三块玉子烧可以一块块吃掉，春田收盘；一年只端一次；2 月 29 日在平年 2 月 28 日庆祝 | 完成（@Claude/feat/T-54-T-58-T-59） | T-50 | `app.js`、存档表 | 生日只存在本地 |
 | T-59 | 离线可用：做成 PWA，可“添加到主屏幕”。`manifest.json` + `sw.js`，只在 http(s) 下注册；谷歌字体不缓存，断网时退回系统字体 | 完成（@Claude/feat/T-54-T-58-T-59） | — | `manifest.json`、`sw.js` | 断网刷新仍能打开 |
@@ -541,6 +544,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | 2026-10-30 | v0.1.6 | T-44：CSS / JS 统一资源版本，避免部署后混用旧缓存；SVG 热点增加原生透明兜底，新增无样式与资源 URL 回归检查。最初因环境断连未运行；T-45 恢复运行环境后纳入完整浏览器回归。 |
 | 2026-10-30 | v0.1.7 | T-45：独立完整榻榻米场景；镜头跟随已保存座位；双向换座、全套热点与快捷入口、手机全景及减少动态效果；保留现有订单与收集数据 |
 | 2026-10-30 | v0.1.8 | T-46：客人改为微缩手作玩偶；12 种发型 / 服装组合、材质颜色与独立配饰；吧台 / 座敷分别放大到 190 / 220 单位，预览同步；保留所有选项与旧存档 |
+| 2026-10-31 | v0.2.6 | T-55 节日装饰（正月 / 赏樱 / 七夕 / 万圣节 / 圣诞）；T-56 下雨天；`?date=`、`?weather=` 预览参数 |
 | 2026-10-31 | v0.2.5 | T-54 拍照模式；T-58 生日玉子烧；T-59 PWA 离线可用（manifest、service worker、图标）；自测清单加入 sw.js 版本号 |
 | 2026-10-31 | v0.2.4 | T-26 定食套餐（刺身 / 握寿司 / 天妇罗 / おまかせ，约 85 折，新增米饭单品）；T-40 积分卡与抽奖；Q9 定稿；新增 T-61 手写小票、Q14 奖品用法 |
 | 2026-10-31 | v0.2.3 | T-53 小票本与来店次数；T-60 体检缺陷修复、分享封面图与 favicon |

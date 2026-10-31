@@ -208,6 +208,19 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('.steam').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.room-layer.is-active').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
+    // T-55/T-56: festival decorations and rain follow ?date= / ?weather=, and never block hotspots.
+    const fp = await context.newPage(); const ferrors = []; fp.on('pageerror', e => ferrors.push(e.message));
+    const indexUrl = pathToFileURL(path.join(root, 'index.html')).href;
+    await fp.goto(indexUrl + '?date=2026-07-05&weather=rain'); await fp.waitForFunction(() => document.querySelector('#chef-figure image'));
+    assert.equal(await fp.locator('.room-layer.is-active .deco-tanabata').count(), 1);
+    assert.equal(await fp.locator('.room-layer.is-active .rain').count(), 1);
+    assert.equal(await fp.locator('.room-layer.is-active .deco-umbrella').count(), 1);
+    await fp.locator('.scene [data-id="noren"]:visible').first().click(); assert.equal(await fp.locator('#overlay').isVisible(), true); await fp.keyboard.press('Escape');
+    await fp.goto(indexUrl + '?date=2027-04-01&weather=clear'); await fp.waitForFunction(() => document.querySelector('#chef-figure image'));
+    assert.equal(await fp.locator('.petals .petal').count(), 18); assert.equal(await fp.locator('.rain').count(), 0);
+    await fp.goto(indexUrl + '?date=2026-03-01&weather=clear'); await fp.waitForFunction(() => document.querySelector('#chef-figure image'));
+    assert.equal(await fp.locator('.atmo').count(), 0);
+    assert.deepEqual(ferrors, []); await fp.close();
     // Over http(s): T-58 birthday tamagoyaki, T-54 photo, T-59 offline reload through the service worker.
     const http = require('node:http'); const fs = require('node:fs');
     const types = {'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg'};
@@ -239,6 +252,6 @@ const root = path.resolve(__dirname, '..');
       assert.deepEqual(werrors,[]);
       await web.close();
     } finally { server.close(); }
-    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, set meals, points card and prize draw, stool vs tatami sitting pose, mobile views, reduced motion, birthday tamagoyaki, photo mode and offline reload over http.');
+    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, set meals, points card and prize draw, stool vs tatami sitting pose, mobile views, reduced motion, festival decorations and rain, birthday tamagoyaki, photo mode and offline reload over http.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

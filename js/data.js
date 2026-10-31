@@ -199,9 +199,23 @@ window.SHOP_DATA = {
     omakaseIntro: "好，那就交给我吧。",
     legendary: "……今天运气不错，这条鱼可不常见。",
     afterOrder: ["はい、お待ち！", "请慢用～", "这盘我很满意，你尝尝。"],
+    rainy: ["外面下雨了吧？先喝口热焙茶暖暖。", "下雨天最适合热的：味噌汤、茶碗蒸、扬出豆腐。", "雨伞放门口就好，我帮你看着。"],
     drawIntro: "集满了啊，谢谢常来！来，摇一摇抽奖箱。",
     cleared: ["ごちそうさま！盘子我收走啦。", "吃得真干净，下次再来～", "满意的话，记得再来哦。"],
   },
+
+  // 节日装饰（T-55）：按真实日期（MM-DD，含首尾）自动出现，可用 ?date=2026-07-07 预览。
+  // deco 是 art.js 里的装饰；petals 是满屏飘樱花。line 是春田那几天会说的话。
+  festivals: [
+    { id: "shogatsu", name: "正月", from: "01-01", to: "01-07", deco: "kadomatsu", line: "新年好！今年也请多关照。门口的门松是我自己扎的。" },
+    { id: "sakura", name: "赏樱", from: "03-25", to: "04-10", deco: "petals", line: "樱花开了。今天的真鲷正当季，配樱花盐很好吃。" },
+    { id: "tanabata", name: "七夕", from: "07-01", to: "07-07", deco: "tanabata", line: "七夕快到了，要不要在竹子上挂个愿望？" },
+    { id: "halloween", name: "万圣节", from: "10-25", to: "10-31", deco: "pumpkin", line: "南瓜灯是隔壁小朋友帮忙刻的。不给糖就捣蛋？给你一块蕨饼吧。" },
+    { id: "christmas", name: "圣诞", from: "12-18", to: "12-25", deco: "tree", line: "圣诞快乐！今天的寿司也算是一种礼物吧。" },
+  ],
+
+  // 下雨天（T-56）：按日期固定随机，平时约 18% 的日子下雨，6 月梅雨季约 40%；可用 ?weather=rain / clear 预览。
+  rain: { chance: 0.18, juneChance: 0.4 },
 
   // 积分卡（T-40，PRD Q11）：每单盖一个章，集满 10 个找春田抽一次奖。weight 是概率（%），Jacey 可改。
   prizes: [

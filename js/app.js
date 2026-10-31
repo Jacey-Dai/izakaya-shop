@@ -62,6 +62,7 @@
   const itemDesc = (it) => (it.id.startsWith("s-") ? t("menu.sashimiDesc") : tx("menu", it.id, "desc", it.desc));
   const setName = (st) => tx("sets", st.id, "name", st.name);
   const setDesc = (st) => tx("sets", st.id, "desc", st.desc);
+  const festText = (f, field) => tx("festivals", f.id, field, f[field]);
   const prizeText = (p, field) => tx("prizes", p.id, field, p[field]);
   const catName = (c) => (isEn() && EN.categories && EN.categories[c.id]) || c.name;
   const seatName = (s) => tx("seats", s.id, "name", s.name);
@@ -119,6 +120,25 @@
     while (out.length < n && pool.length) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
     return out;
   };
+  // ---------- 节日与天气（T-55 / T-56） ----------
+  // ?date=2026-07-07 预览其他日期的节日和天气，?weather=rain / clear 强制天气
+  const params = new URLSearchParams(location.search);
+  const sceneDate = (() => {
+    const q = params.get("date");
+    const d = q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? new Date(q + "T12:00:00") : null;
+    return d && !isNaN(d) ? d : new Date();
+  })();
+  const mmdd = (d) => String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const festival = D.festivals.find((f) => f.from <= mmdd(sceneDate) && mmdd(sceneDate) <= f.to) || null;
+  const rainy = (() => {
+    const w = params.get("weather");
+    if (w === "rain") return true;
+    if (w === "clear") return false;
+    let seed = sceneDate.getFullYear() * 10000 + (sceneDate.getMonth() + 1) * 100 + sceneDate.getDate() + 13;
+    for (let i = 0; i < 3; i++) seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280 < (sceneDate.getMonth() === 5 ? D.rain.juneChance : D.rain.chance);
+  })();
+
   // 今日鲜货
   const todaysFresh = dailyPick(menuFish, 4, 0);
   // 握寿司定食今天的 3 款（每款一贯两件，共 6 贯）
@@ -406,6 +426,69 @@
     ], 900);
     hideDish();
     toast(pick(chefLine("cleared")));
+  }
+
+  // ---------- 节日装饰与雨天的画面 ----------
+  // 坐标与 viewBox 一致：[x, y, 缩放]，y 是装饰底部落地的位置
+  const DECO_SPOTS = {
+    kadomatsu: { counter: [66, 660, 1.25], tatami: [400, 494, 1.1] },
+    tanabata: { counter: [1012, 505, 1], tatami: [882, 494, 1] },
+    pumpkin: { counter: [962, 490, 1.1], tatami: [404, 498, 1] },
+    tree: { counter: [962, 490, 1.15], tatami: [404, 498, 1.1] },
+    umbrella: { counter: [138, 645, 1.1], tatami: [228, 530, 0.95] },
+  };
+  // 雨：吧台看得到门边的障子，座敷看得到院子的窗；暖帘下摆滴水
+  const RAIN_VIEWS = {
+    counter: { win: [28, 295, 137, 297], drops: [[45, 284], [80, 288], [118, 290], [155, 292], [188, 294]] },
+    tatami: { win: [452, 226, 358, 182], drops: [[40, 256], [80, 260], [120, 262], [160, 266], [192, 266]] },
+  };
+  const decoAt = (kind, room) => {
+    const [x, y, k] = DECO_SPOTS[kind][room];
+    return `<g class="deco deco-${kind}" transform="translate(${x} ${y}) scale(${k})">${ART.deco(kind)}</g>`;
+  };
+  function renderAtmosphere() {
+    const scene = $(".scene");
+    if (rainy) {
+      scene.querySelector("defs").insertAdjacentHTML("beforeend", `
+        <pattern id="rain-pat" width="40" height="80" patternUnits="userSpaceOnUse">
+          <path d="M6 0 l-4 16 M26 30 l-4 16 M16 56 l-4 16 M36 12 l-3 12" stroke="#eef4fa" stroke-width="2.2" stroke-linecap="round" opacity=".9"/>
+        </pattern>`);
+    }
+    $$(".room-layer").forEach((layer) => {
+      const room = layer.dataset.room;
+      let html = "";
+      if (rainy) {
+        const { win: [x, y, w, h], drops } = RAIN_VIEWS[room];
+        html += `
+          <clipPath id="rain-clip-${room}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath>
+          <g class="rain" clip-path="url(#rain-clip-${room})">
+            <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#41557e" opacity=".32"/>
+            <rect class="rain-fall" x="${x}" y="${y - 80}" width="${w}" height="${h + 80}" fill="url(#rain-pat)"/>
+          </g>
+          ${drops.map(([dx, dy], i) => `<ellipse class="rain-drop" style="animation-delay:${(i * 0.37) % 1.4}s" cx="${dx}" cy="${dy}" rx="2.4" ry="3.4" fill="#cfe0f0" stroke="#7fa6c8" stroke-width=".8"/>`).join("")}
+          ${decoAt("umbrella", room)}`;
+      }
+      if (festival && DECO_SPOTS[festival.deco]) html += decoAt(festival.deco, room);
+      if (!html) return;
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "atmo");
+      g.setAttribute("pointer-events", "none");
+      g.setAttribute("aria-hidden", "true");
+      g.innerHTML = html;
+      layer.querySelector(".hotspot").before(g);
+    });
+    // 樱花季：花瓣从上往下飘，画在最上层但不挡点击
+    if (festival && festival.deco === "petals") {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "atmo petals");
+      g.setAttribute("pointer-events", "none");
+      g.setAttribute("aria-hidden", "true");
+      g.innerHTML = Array.from({ length: 18 }, (_, i) => {
+        const x = (i * 211) % 1200, y = (i * 137) % 760;
+        return `<path class="petal" style="--dur:${6 + (i % 5)}s;animation-delay:-${(i * 0.9) % 6}s" transform="translate(${x} ${y}) rotate(${i * 40})" d="M0 0 q6 -8 12 0 q-6 9 -12 0 Z" fill="#f6c3cf" stroke="#d9879a" stroke-width=".8"/>`;
+      }).join("");
+      scene.appendChild(g);
+    }
   }
 
   // ---------- 生日彩蛋（T-58） ----------
@@ -874,6 +957,8 @@
       if (atCounter && Math.random() < 0.6) line = pick(chefLine("counterExtra"));
       let extra = "";
 
+      if (festival && Math.random() < 0.5) line = festText(festival, "line");
+      else if (rainy && Math.random() < 0.5) line = pick(chefLine("rainy"));
       if (state.stamps >= STAMP_MAX) line = t("chef.cardFull");
       if (mode === "fresh") {
         line = t("chef.fresh", { list: todaysFresh.map(fishName).join(t("chef.listSep")) });
@@ -1512,6 +1597,9 @@
     if (state.seat) guestAct("act-wave", 1000);
   }, 500);
   setTimeout(maybeBirthday, 1800);
+  renderAtmosphere();
+  if (festival) setTimeout(() => toast(t("fest.toast", { name: festText(festival, "name") }), true), 1200);
+  if (rainy) setTimeout(() => toast(t("rain.toast")), festival ? 2000 : 1200);
 
   $("#hud-photo").addEventListener("click", takePhoto);
 
