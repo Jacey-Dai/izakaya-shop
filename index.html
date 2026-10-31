@@ -4,12 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>小舟 · Kobune Sushi</title>
-  <meta name="description" content="一家可以探索的日式小店：看菜单、和师傅聊天、自选鱼生、收集刺身图鉴。">
+  <meta name="description" content="一家可以探索的日式小店：看菜单、和师傅聊天、自选鱼生、收集刺身图鉴。 A cozy little sushi shop you can explore: menus, a friendly chef, build-your-own sashimi and a fish book to collect.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="小舟 · Kobune Sushi">
+  <meta property="og:description" content="走进一家微缩手作风的寿司小店：点菜、看春田师傅捏寿司、收集鱼图鉴。Step into a tiny handmade sushi shop.">
+  <meta property="og:url" content="https://jacey-dai.github.io/izakaya-shop/">
+  <meta property="og:image" content="https://jacey-dai.github.io/izakaya-shop/assets/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Yuji+Syuku&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <!-- 发布 CSS / JS 改动时同步递增资源版本，避免新 HTML 混用旧缓存。 -->
-  <link rel="stylesheet" href="css/style.css?v=20261031-4">
+  <link rel="stylesheet" href="css/style.css?v=20261031-5">
 </head>
 <body>
   <header class="hud">
@@ -23,6 +30,7 @@
     <nav class="hud-actions">
       <button class="hud-btn" data-open="seats" id="hud-seat">座位：未选</button>
       <button class="hud-btn" data-open="zukan" id="hud-zukan">图鉴 0/0</button>
+      <button class="hud-btn" data-open="receipts" id="hud-receipts" data-i18n="hud.receipts">小票本</button>
       <button class="hud-btn hud-lang" id="lang-toggle" aria-label="Switch to English">EN</button>
       <button class="hud-btn hud-cart" data-open="cart" id="hud-cart">お会計 <b>0</b></button>
     </nav>
@@ -30,6 +38,7 @@
 
   <main class="stage">
     <p id="room-status" class="sr-only" aria-live="polite"></p>
+    <p id="live-status" class="sr-only" aria-live="polite"></p>
     <div class="room-bar" hidden>
       <button class="room-return" id="back-counter" hidden data-i18n="room.back">回到吧台席</button>
     </div>
@@ -57,10 +66,10 @@
         <g class="hotspot" data-id="zukan"><rect class="hit-area" fill="transparent" stroke="transparent" x="1040" y="90" width="100" height="275" rx="10"/><circle class="hotspot-dot" opacity="0" cx="1090" cy="337" r="7"/></g>
         <g class="hotspot" data-id="chef"><rect class="hit-area" fill="transparent" stroke="transparent" x="540" y="199" width="177" height="266" rx="45"/><circle class="hotspot-dot" opacity="0" cx="633" cy="428" r="7"/></g>
         <g class="hotspot" data-id="fishcase"><rect class="hit-area" fill="transparent" stroke="transparent" x="320" y="402" width="291" height="81" rx="10"/><circle class="hotspot-dot" opacity="0" cx="462" cy="448" r="7"/></g>
-        <g class="hotspot" data-id="neko"><rect class="hit-area" fill="transparent" stroke="transparent" x="865" y="393" width="70" height="92" rx="20"/><circle class="hotspot-dot" opacity="0" cx="900" cy="454" r="7"/></g>
+        <g class="hotspot" data-id="neko"><rect class="hit-area" fill="transparent" stroke="transparent" x="853" y="388" width="94" height="102" rx="22"/><circle class="hotspot-dot" opacity="0" cx="900" cy="454" r="7"/></g>
         <g class="hotspot" data-id="seats"><rect class="hit-area" fill="transparent" stroke="transparent" x="303" y="557" width="574" height="113" rx="25"/><circle class="hotspot-dot" opacity="0" cx="597" cy="588" r="7"/></g>
         <g class="hotspot" data-id="seats"><path class="hit-area" fill="transparent" stroke="transparent" d="M990 516 L1200 570 L1200 729 L978 655 Z"/><circle class="hotspot-dot" opacity="0" cx="1047" cy="561" r="7"/></g>
-        <g class="hotspot" data-id="tablemenu"><path class="hit-area" fill="transparent" stroke="transparent" d="M1100 465 L1147 470 L1141 528 L1096 524 Z"/><circle class="hotspot-dot" opacity="0" cx="1122" cy="504" r="5"/></g>
+        <g class="hotspot" data-id="tablemenu"><path class="hit-area" fill="transparent" stroke="transparent" d="M1086 455 L1160 462 L1154 538 L1082 532 Z"/><circle class="hotspot-dot" opacity="0" cx="1122" cy="504" r="5"/></g>
         </g>
         <!-- 独立完整座敷视角，与吧台视角共用菜单、点餐及收集逻辑。 -->
         <g id="scene-tatami" class="room-layer" data-room="tatami" display="none" aria-hidden="true">
@@ -106,10 +115,10 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script src="js/i18n.js?v=20261031-4"></script>
-  <script src="js/data.js?v=20261031-4"></script>
-  <script src="js/data.en.js?v=20261031-4"></script>
-  <script src="js/art.js?v=20261031-4"></script>
-  <script src="js/app.js?v=20261031-4"></script>
+  <script src="js/i18n.js?v=20261031-5"></script>
+  <script src="js/data.js?v=20261031-5"></script>
+  <script src="js/data.en.js?v=20261031-5"></script>
+  <script src="js/art.js?v=20261031-5"></script>
+  <script src="js/app.js?v=20261031-5"></script>
 </body>
 </html>
