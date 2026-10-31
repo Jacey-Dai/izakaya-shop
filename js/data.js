@@ -159,6 +159,7 @@ window.SHOP_DATA = {
     tablemenu: { title: "桌面菜单 · メニュー", hint: "翻开完整菜单点菜" },
     zukan: { title: "挂轴 · 鱼图鉴", hint: "查看你收集到的鱼生" },
     neko: { title: "招财猫 · 招き猫", hint: "摸一摸，抽一支签" },
+    dish: { title: "你的这一单", hint: "再看一眼小票" },
   },
 
   // 厨师形象。春田师傅默认男性；以后玩家“当厨师”（PRD T-10）时可以选男 / 女。
@@ -190,6 +191,5 @@ window.SHOP_DATA = {
     { result: "中吉", text: "好鱼正在路上。师傅推荐的稀有度略有提升。", luck: 2 },
     { result: "小吉", text: "平平淡淡也是福，来盘三文鱼吧。", luck: 1 },
     { result: "吉", text: "适合尝试一种没吃过的鱼。", luck: 1 },
-    { result: "末吉", text: "慢慢来，图鉴总会集满的。", luck: 0 },
   ],
 };
