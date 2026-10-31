@@ -6,6 +6,9 @@
   <title>小舟 · Kobune Sushi</title>
   <meta name="description" content="一家可以探索的日式小店：看菜单、和师傅聊天、自选鱼生、收集刺身图鉴。 A cozy little sushi shop you can explore: menus, a friendly chef, build-your-own sashimi and a fish book to collect.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="theme-color" content="#ad573f">
   <meta property="og:type" content="website">
   <meta property="og:title" content="小舟 · Kobune Sushi">
   <meta property="og:description" content="走进一家微缩手作风的寿司小店：点菜、看春田师傅捏寿司、收集鱼图鉴。Step into a tiny handmade sushi shop.">
@@ -16,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Yuji+Syuku&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <!-- 发布 CSS / JS 改动时同步递增资源版本，避免新 HTML 混用旧缓存。 -->
-  <link rel="stylesheet" href="css/style.css?v=20261031-6">
+  <link rel="stylesheet" href="css/style.css?v=20261031-7">
 </head>
 <body>
   <header class="hud">
@@ -31,6 +34,7 @@
       <button class="hud-btn" data-open="seats" id="hud-seat">座位：未选</button>
       <button class="hud-btn" data-open="zukan" id="hud-zukan">图鉴 0/0</button>
       <button class="hud-btn" data-open="receipts" id="hud-receipts" data-i18n="hud.receipts">小票本</button>
+      <button class="hud-btn" id="hud-photo" data-i18n="hud.photo">拍照</button>
       <button class="hud-btn hud-lang" id="lang-toggle" aria-label="Switch to English">EN</button>
       <button class="hud-btn hud-cart" data-open="cart" id="hud-cart">お会計 <b>0</b></button>
     </nav>
@@ -115,10 +119,10 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script src="js/i18n.js?v=20261031-6"></script>
-  <script src="js/data.js?v=20261031-6"></script>
-  <script src="js/data.en.js?v=20261031-6"></script>
-  <script src="js/art.js?v=20261031-6"></script>
-  <script src="js/app.js?v=20261031-6"></script>
+  <script src="js/i18n.js?v=20261031-7"></script>
+  <script src="js/data.js?v=20261031-7"></script>
+  <script src="js/data.en.js?v=20261031-7"></script>
+  <script src="js/art.js?v=20261031-7"></script>
+  <script src="js/app.js?v=20261031-7"></script>
 </body>
 </html>

@@ -175,5 +175,21 @@ window.KOBUNE_ART = (() => {
       <text x="181" y="111" text-anchor="middle" font-size="12" fill="#fff" font-family="serif" transform="rotate(-8 181 106)">小舟</text>`, "art art-takeout");
   }
 
-  return { sashimi, nigiri, maki, geta, takeoutBox, slicePiece, OUTLINE: T.ol };
+  // ---------- 生日玉子烧（T-58）：白盘三块玉子烧，中间那块插一根蜡烛 ----------
+  function tamagoyaki() {
+    const piece = (x, candle) => `<g class="bite"><g transform="translate(${x} 0)">
+      <rect x="0" y="34" width="44" height="26" rx="6" fill="#f6c94a" ${OL()}/>
+      <path d="M4 42 Q22 38 40 42 M4 50 Q22 46 40 50" stroke="#e0a43a" stroke-width="1.6" fill="none"/>
+      <path d="M6 37 q8 -2 14 0" ${HI}/>
+      ${candle ? `<rect x="18" y="0" width="8" height="35" rx="2" fill="#f2a7b6" ${OL()}/>
+      <path d="M18 8 l8 -4 M18 16 l8 -4 M18 24 l8 -4" stroke="#fff" stroke-width="1.6"/>
+      <path class="candle-flame" d="M22 -17 Q30 -6 22 -1 Q14 -6 22 -17 Z" fill="#ffb238" stroke="#e07a1f" stroke-width="1"/>` : ""}
+    </g></g>`;
+    return svg(200, 98, `<g transform="translate(0 20)">
+      <ellipse cx="100" cy="62" rx="96" ry="16" fill="#f7f1e6" ${OL()}/>
+      <ellipse cx="100" cy="60" rx="78" ry="10" fill="#ece3d2"/>
+      ${piece(30, false)}${piece(78, true)}${piece(126, false)}</g>`, "art art-tamago");
+  }
+
+  return { sashimi, nigiri, maki, geta, takeoutBox, tamagoyaki, slicePiece, OUTLINE: T.ol };
 })();

@@ -99,6 +99,9 @@
     // 积分卡（T-40）：当前章数（0–10）和抽到的奖品 [{ id, at }]
     stamps: store.get("stamps", 0),
     prizes: store.get("prizes", []),
+    // 生日彩蛋（T-58）：{ m, d } 只存在本机；bdayYear 记录今年是否已经庆祝过
+    birthday: store.get("birthday", null),
+    bdayYear: store.get("bdayYear", 0),
     menuTab: "sashimi",
     zukanFilter: "all",
   };
@@ -330,19 +333,22 @@
   }
 
   // 吧台：春田先切鱼、捏寿司，再把盘子递过来；盘子留在座位上，点它一贯一贯吃掉。
-  // 没有鱼的订单（只点饮料等）不端盘子。
-  async function serveDish(lines, mode, done) {
+  // 没有鱼的订单（只点饮料等）不端盘子。special = { art, say } 用于生日玉子烧这类不是订单的盘子。
+  async function serveDish(lines, mode, done, special = null) {
     const fishList = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
     const dish = $("#scene-dish");
     hideDish();
-    if (!fishList.length) { done(); return; }
+    if (!fishList.length && !special) { done(); return; }
     dishState.busy = true;
     dishState.serving = true;
-    chefSay("トントン");
+    chefSay(special ? special.say : "トントン");
     await chefAct("act-slice", 700);
-    chefSay("ぎゅっ");
-    await chefAct("act-nigiri", 700);
-    Object.assign(dishState, { art: mode === "takeout" ? ART.takeoutBox(fishList) : ART.geta(fishList), mode, eaten: 0 });
+    if (!special) {
+      chefSay("ぎゅっ");
+      await chefAct("act-nigiri", 700);
+    }
+    const art = special ? special.art : mode === "takeout" ? ART.takeoutBox(fishList) : ART.geta(fishList);
+    Object.assign(dishState, { art, mode, eaten: 0 });
     const room = $(".scene").dataset.room;
     placeDish(room);
     dish.setAttribute("aria-label", hotspotInfo("dish").title);
@@ -400,6 +406,30 @@
     ], 900);
     hideDish();
     toast(pick(chefLine("cleared")));
+  }
+
+  // ---------- 生日彩蛋（T-58） ----------
+  // 2 月 29 日生日在平年的 2 月 28 日庆祝
+  function isBirthday(date = new Date()) {
+    const b = state.birthday;
+    if (!b) return false;
+    const y = date.getFullYear();
+    const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    const [m, d] = b.m === 2 && b.d === 29 && !leap ? [2, 28] : [b.m, b.d];
+    return date.getMonth() + 1 === m && date.getDate() === d;
+  }
+  // 坐下、没有别的盘子、没有弹窗时才端；今年庆祝过就不再端
+  function maybeBirthday() {
+    const year = new Date().getFullYear();
+    if (!isBirthday() || state.bdayYear === year || !state.seat || dishState.serving || dishState.art || current) return;
+    state.bdayYear = year;
+    store.set("bdayYear", year);
+    toast(t("bday.toast"), true);
+    serveDish([], "dine", () => {
+      guestSay("わあ！");
+      guestAct("act-happy", 900);
+      announce(t("bday.live"));
+    }, { art: ART.tamagoyaki(), say: "おめでとう！" });
   }
 
   // 镜头只从已有 seat 派生，刷新与旧存档无需新增状态或迁移。
@@ -554,7 +584,11 @@
     view.mount && view.mount(...args);
     modal.scrollTop = 0;
   }
-  function close() { overlay.hidden = true; current = null; }
+  function close() {
+    overlay.hidden = true;
+    current = null;
+    setTimeout(maybeBirthday, 600);
+  }
   function rerender(...args) { if (current) open(current, ...(args.length ? args : currentArgs)); }
 
   $("#modal-close").addEventListener("click", close);
@@ -572,8 +606,118 @@
   });
   $$(".hud [data-open]").forEach((b) => b.addEventListener("click", () => open(b.dataset.open)));
 
+  // ---------- 拍照模式（T-54） ----------
+  // 复制场景 SVG，把图片转成 data URL、把 CSS 算出的样式写进属性，画到 Canvas 上，再加店名、日期和印章。
+  // file:// 打开时浏览器不允许读本地图片，会提示用线上地址。
+  const STYLE_PROPS = ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity", "opacity", "font-family", "font-size", "font-weight", "letter-spacing", "text-anchor", "dominant-baseline", "writing-mode", "visibility", "filter"];
+  const toDataURL = async (url) => {
+    const blob = await (await fetch(url)).blob();
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  };
+  async function sceneImage() {
+    const scene = $(".scene");
+    const clone = scene.cloneNode(true);
+    const src = [scene, ...scene.querySelectorAll("*")];
+    const dst = [clone, ...clone.querySelectorAll("*")];
+    src.forEach((el, i) => {
+      const cs = getComputedStyle(el);
+      const style = STYLE_PROPS.map((p) => `${p}:${cs.getPropertyValue(p)}`).join(";");
+      dst[i].setAttribute("style", (dst[i].getAttribute("style") || "") + ";" + style + ";animation:none;transition:none");
+      if (cs.display === "none") dst[i].setAttribute("display", "none");
+    });
+    // 拍照时不显示悬停轮廓和提示点
+    $$(".hotspot-dot, .pop-say", clone).forEach((el) => el.remove());
+    $$(".hit-area", clone).forEach((el) => el.setAttribute("style", "fill:transparent;stroke:transparent"));
+    const grain = $("#kb-grain");
+    if (grain) clone.querySelector("defs").appendChild(grain.cloneNode(true));
+    const cache = {};
+    for (const img of $$("image", clone)) {
+      const href = img.getAttribute("href");
+      if (!href || href.startsWith("data:")) continue;
+      cache[href] = cache[href] || await toDataURL(new URL(href, location.href).href);
+      img.setAttribute("href", cache[href]);
+    }
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", 1200);
+    clone.setAttribute("height", 800);
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" }));
+    try {
+      const im = new Image();
+      im.src = url;
+      await im.decode();
+      return im;
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  async function takePhoto() {
+    if (location.protocol === "file:") { toast(t("photo.fileOnly")); return; }
+    toast(t("photo.taking"));
+    try {
+      const im = await sceneImage();
+      const c = document.createElement("canvas");
+      c.width = 1280; c.height = 960;
+      const g = c.getContext("2d");
+      g.fillStyle = "#fff8ec"; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(im, 40, 40, 1200, 800);
+      g.strokeStyle = "#96643e"; g.lineWidth = 4; g.strokeRect(40, 40, 1200, 800);
+      // 下方：店名、日期 + 座位、朱红印章
+      const seat = D.seats.find((s) => s.id === state.seat);
+      const date = new Date().toLocaleDateString(isEn() ? "en-US" : "zh-CN", { year: "numeric", month: "long", day: "numeric" });
+      g.fillStyle = "#423831";
+      g.font = '600 40px "Yuji Syuku", "Noto Serif SC", serif';
+      g.textBaseline = "middle";
+      g.fillText(isEn() ? "Kobune Sushi" : "小舟 · Kobune", 48, 900);
+      g.font = '400 24px "Noto Serif SC", serif';
+      g.fillStyle = "#796957";
+      g.textAlign = "right";
+      g.fillText(date + (seat ? " · " + seatName(seat) : ""), 1140, 900);
+      g.save();
+      g.translate(1196, 900); g.rotate(-0.12);
+      g.strokeStyle = "#ad573f"; g.lineWidth = 4; g.strokeRect(-30, -30, 60, 60);
+      g.fillStyle = "#ad573f"; g.textAlign = "center"; g.font = '600 38px "Yuji Syuku", serif';
+      g.fillText("舟", 0, 2);
+      g.restore();
+      open("photo", c.toDataURL("image/png"));
+    } catch {
+      toast(t("photo.failed"));
+    }
+  }
+
   // ---------- 各个视图 ----------
   const views = {};
+
+  views.photo = {
+    cls: "book",
+    render: (dataUrl) => {
+      const d = new Date();
+      const name = `kobune-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}.png`;
+      return `
+        <h2>${t("photo.title")}</h2>
+        <p class="sub">${t("photo.sub")}</p>
+        <img class="photo-preview" src="${dataUrl}" alt="${t("photo.alt")}">
+        <div class="btn-row" style="justify-content:center">
+          <a class="btn primary" id="photo-save" href="${dataUrl}" download="${name}">${t("photo.save")}</a>
+          ${navigator.canShare ? `<button class="btn" id="photo-share">${t("photo.share")}</button>` : ""}
+        </div>`;
+    },
+    mount: (dataUrl) => {
+      const share = $("#photo-share", body);
+      if (!share) return;
+      share.addEventListener("click", async () => {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], "kobune.png", { type: "image/png" });
+          if (navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: shopName() });
+          else toast(t("photo.noShare"));
+        } catch { /* 用户取消分享 */ }
+      });
+    },
+  };
 
   // 暖帘：店铺介绍
   views.noren = {
@@ -902,6 +1046,14 @@
             </div>`).join("")}
         </div>
       </div>
+      <div class="opt-row bday-row">
+        <span>${t("bday.label")}</span>
+        <div>
+          <select id="bday-m" aria-label="${t("bday.month")}"><option value="">${t("bday.month")}</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${state.birthday && state.birthday.m === i + 1 ? "selected" : ""}>${t("bday.m", { n: i + 1 })}</option>`).join("")}</select>
+          <select id="bday-d" aria-label="${t("bday.day")}"><option value="">${t("bday.day")}</option>${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}" ${state.birthday && state.birthday.d === i + 1 ? "selected" : ""}>${t("bday.d", { n: i + 1 })}</option>`).join("")}</select>
+          <small>${t("bday.note")}</small>
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn primary" data-open="seats">${state.seat ? t("guest.changeSeat") : t("btn.goSeats")}</button>
         <button class="btn" id="guest-random">${t("guest.random")}</button>
@@ -911,6 +1063,16 @@
       $$(".opt", body).forEach((b) => b.addEventListener("click", () => {
         state.guest[b.dataset.k] = b.dataset.v; save();
       }));
+      const saveBday = () => {
+        const m = Number($("#bday-m", body).value), d = Number($("#bday-d", body).value);
+        // 不存在的日期（如 4 月 31 日）按无效处理
+        const valid = m && d && d <= [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+        state.birthday = valid ? { m, d } : null;
+        store.set("birthday", state.birthday);
+        if (valid) toast(isBirthday() && state.bdayYear !== new Date().getFullYear() ? t("bday.today") : t("bday.saved"));
+      };
+      $("#bday-m", body).addEventListener("change", saveBday);
+      $("#bday-d", body).addEventListener("change", saveBday);
       $("#guest-random", body).addEventListener("click", () => {
         Object.entries(D.guest).forEach(([k, opts]) => { state.guest[k] = pick(opts).id; });
         save();
@@ -1349,4 +1511,12 @@
     chefAct("act-bow", 1000);
     if (state.seat) guestAct("act-wave", 1000);
   }, 500);
+  setTimeout(maybeBirthday, 1800);
+
+  $("#hud-photo").addEventListener("click", takePhoto);
+
+  // 离线可用（T-59）：只在 http(s) 下注册，file:// 打开时浏览器不支持
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* 注册失败时照常在线使用 */ }));
+  }
 })();

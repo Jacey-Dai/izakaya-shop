@@ -208,6 +208,37 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('.steam').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.room-layer.is-active').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
-    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, set meals, points card and prize draw, stool vs tatami sitting pose, mobile views, reduced motion.');
+    // Over http(s): T-58 birthday tamagoyaki, T-54 photo, T-59 offline reload through the service worker.
+    const http = require('node:http'); const fs = require('node:fs');
+    const types = {'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg'};
+    const server = http.createServer((req,res)=>{ const f = path.join(root, decodeURIComponent(new URL(req.url,'http://x').pathname).replace(/\/$/,'/index.html')); fs.readFile(f,(err,data)=>{ if(err){res.writeHead(404);res.end();return;} res.writeHead(200,{'Content-Type':types[path.extname(f)]||'application/octet-stream'}); res.end(data); }); });
+    await new Promise(r=>server.listen(0,'127.0.0.1',r));
+    try {
+      const web = await browser.newContext({ viewport: { width: 1440, height: 1100 }, locale: 'en-US' });
+      const wp = await web.newPage(); const werrors = []; wp.on('pageerror', e => werrors.push(e.message));
+      const base = 'http://127.0.0.1:' + server.address().port + '/';
+      await wp.goto(base); await wp.waitForFunction(() => document.querySelector('#chef-figure image'));
+      const today = new Date();
+      await wp.evaluate(([m,d])=>{ localStorage.setItem('kobune.seat','"counter"'); localStorage.setItem('kobune.birthday', JSON.stringify({m,d})); }, [today.getMonth()+1, today.getDate()]);
+      await wp.reload(); await wp.locator('#scene-dish .art-tamago').waitFor({timeout:6000});
+      assert.equal(await wp.evaluate(()=>JSON.parse(localStorage.getItem('kobune.bdayYear'))), today.getFullYear());
+      await wp.waitForTimeout(1500); await wp.screenshot({ path: '/tmp/kobune-birthday.png' });
+      for (let i=0;i<3;i++) { await wp.locator('#scene-dish').click({force:true}); await wp.waitForTimeout(700); }
+      await wp.locator('#scene-dish').waitFor({state:'hidden',timeout:4000});
+      // Once a year: reloading the same day does not serve it again.
+      await wp.reload(); await wp.waitForFunction(() => document.querySelector('#chef-figure image')); await wp.waitForTimeout(2600);
+      assert.equal(await wp.locator('#scene-dish').isHidden(), true);
+      await wp.locator('#hud-photo').click(); await wp.locator('.photo-preview').waitFor({timeout:8000});
+      assert.equal(await wp.locator('.photo-preview').evaluate(img=>img.decode().then(()=>img.naturalWidth+'x'+img.naturalHeight)), '1280x960');
+      assert.ok((await wp.locator('#photo-save').getAttribute('download')).startsWith('kobune-'));
+      await wp.locator('#modal').screenshot({ path: '/tmp/kobune-photo.png' }); await wp.keyboard.press('Escape');
+      await wp.evaluate(() => navigator.serviceWorker.ready); await wp.reload(); await wp.waitForFunction(() => navigator.serviceWorker.controller);
+      await web.setOffline(true); await wp.reload(); await wp.waitForFunction(() => document.querySelector('#chef-figure image'));
+      assert.equal(await wp.locator('.scene image.room-art').first().evaluate(img=>fetch(img.getAttribute('href')).then(r=>r.ok)), true);
+      await web.setOffline(false);
+      assert.deepEqual(werrors,[]);
+      await web.close();
+    } finally { server.close(); }
+    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, eating and clearing, character actions, set meals, points card and prize draw, stool vs tatami sitting pose, mobile views, reduced motion, birthday tamagoyaki, photo mode and offline reload over http.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
