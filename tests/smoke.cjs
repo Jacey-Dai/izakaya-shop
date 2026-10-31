@@ -64,6 +64,8 @@ const root = path.resolve(__dirname, '..');
     await page.locator('#hud-seat').click(); await page.locator('[data-seat="counter"]').click();
     assert.equal(await page.locator('#guest').isVisible(), true);
     assert.equal(await page.locator('#guest .guest-doll-art').getAttribute('height'),'190');
+    // Counter stools: legs hang down instead of the tatami cross-legged pose.
+    assert.equal(await page.locator('#guest .guest-doll').getAttribute('data-pose'),'stool'); assert.equal(await page.locator('#guest .guest-legs').count(),1);
     await page.locator('#guest').focus();await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
     const visualHash = async () => createHash('sha256').update(await page.locator('.guest-preview').screenshot()).digest('hex');
@@ -144,6 +146,7 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('#scene-tatami .hotspot[tabindex="0"]:not(#scene-dish)').count(),10);
     await page.waitForTimeout(650); await shot('tatami');
     assert.equal(await page.locator('#guest .guest-doll-art').getAttribute('height'),'220');
+    assert.equal(await page.locator('#guest .guest-doll').getAttribute('data-pose'),'floor'); assert.equal(await page.locator('#guest .guest-legs').count(),0);
     await open('tablemenu');await page.locator('[data-add]').first().click();await close();
     const tatamiCart = await page.locator('#hud-cart b').innerText();
     await page.locator('#back-counter').click();
@@ -182,6 +185,6 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.locator('.steam').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.room-layer.is-active').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
-    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, mobile views, reduced motion.');
+    console.log('PASS: file:// assets, 10 hotspots in both languages, keyboard, dine-in, takeout, plate limits, omakase, guest customization with 12 distinct doll combinations and all colors/accessories, persistence, full tatami camera switching and saved view, serving the dish to the seat, stool vs tatami sitting pose, mobile views, reduced motion.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

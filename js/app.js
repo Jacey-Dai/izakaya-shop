@@ -155,12 +155,23 @@
       long: { width: 160, height: 111, lift: 22, cx: 0 },
     };
     const hat = hatFits[style];
+    // 吧台是高凳：裁掉盘腿的膝盖（图集局部坐标），把衣摆放在凳面上，小腿垂在凳腿之间。
+    // 座敷和换装预览保持原来的盘腿坐。
+    const onStool = seat === "counter";
+    const seatClip = {
+      casual: "M0 0 H384 V258 H290 L283 282 Q277 299 262 304 Q192 313 122 304 Q108 299 102 282 L95 258 H0 Z",
+      kimono: "M0 0 H384 V284 Q378 300 350 301 Q192 306 34 301 Q6 300 0 284 Z",
+      yukata: "M0 0 H384 V266 H306 L304 295 Q301 311 280 312 Q208 316 136 312 Q115 311 113 295 L111 266 H0 Z",
+    }[wear];
+    const seatLine = { casual: 309, kimono: 302, yukata: 313 }[wear];
+    const lift = onStool ? -height + (seatLine - (y - 3)) * height / (h + 6) : 0;
     const brimY = -height - hat.lift + hat.height * .73;
     let extra = "";
     if (accessory === "hat") extra = `<svg class="guest-accessory guest-hat" data-fit="${style}" x="${hat.cx - hat.width / 2}" y="${-height - hat.lift}" width="${hat.width}" height="${hat.height}" viewBox="43 153 881 614" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
     if (accessory === "kanzashi") extra = `<svg class="guest-accessory" x="16" y="${-height + 30}" width="58" height="48" viewBox="1020 178 713 584" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
-    return `<g class="guest-doll" data-hair="${style}" data-clothing="${wear}" data-outfit="${opt("outfit").id}" data-hair-color="${opt("hairColor").id}" data-accessory="${accessory}">
-      <ellipse cx="0" cy="-2" rx="${wear === "kimono" ? 76 : 58}" ry="7" fill="#36281d" opacity=".22"/>
+    return `<g class="guest-doll" data-pose="${onStool ? "stool" : "floor"}" data-hair="${style}" data-clothing="${wear}" data-outfit="${opt("outfit").id}" data-hair-color="${opt("hairColor").id}" data-accessory="${accessory}">
+      ${onStool ? stoolLegs(wear, opt("outfit").color, id) : `<ellipse cx="0" cy="-2" rx="${wear === "kimono" ? 76 : 58}" ry="7" fill="#36281d" opacity=".22"/>`}
+      <g transform="translate(0 ${-lift})">
       ${accessory === "hat" ? `<defs><clipPath id="${id}-hat-clearance" clipPathUnits="userSpaceOnUse"><path d="M-125 ${brimY} Q${hat.cx} ${brimY + hat.height * .28} 125 ${brimY} V20 H-125 Z"/></clipPath></defs>` : ""}
       <g class="guest-hat-clearance" ${accessory === "hat" ? `clip-path="url(#${id}-hat-clearance)"` : ""}>
       <svg class="guest-doll-art" x="-110" y="${-height}" width="220" height="${height}" viewBox="${x - 5} ${y - 3} ${w + 10} ${h + 6}" overflow="hidden">
@@ -175,16 +186,42 @@
           <mask id="${id}-neutral-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342"><use href="#${id}-sprite" filter="url(#${id}-neutral)"/></mask>
           <mask id="${id}-hair-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342">${hairRegion("white")}</mask>
           <mask id="${id}-cloth-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342"><rect width="384" height="${wear === "casual" ? 316 : 342}" fill="white"/>${hairRegion("black")}</mask>
+          ${onStool ? `<clipPath id="${id}-seat" clipPathUnits="userSpaceOnUse"><path d="${seatClip}"/></clipPath>` : ""}
         </defs>
+        <g ${onStool ? `clip-path="url(#${id}-seat)"` : ""}>
         <use href="#${id}-sprite"/>
         <g mask="url(#${id}-neutral-mask)">
           <g mask="url(#${id}-cloth-mask)"><use href="#${id}-sprite" filter="url(#${id}-cloth)"/></g>
           <g mask="url(#${id}-hair-mask)"><use href="#${id}-sprite" filter="url(#${id}-hair)"/></g>
         </g>
+        </g>
       </svg>
       </g>
       ${extra}
       <path class="guest-hit" d="M0 ${-height - 5} C-86 ${-height - 5} -86 ${-height + 115} 0 ${-height + 115} C86 ${-height + 115} 86 ${-height - 5} 0 ${-height - 5} Z M-42 -115 Q-78 -95 -${wear === "kimono" ? 90 : 73} -30 Q-85 10 0 2 Q85 10 ${wear === "kimono" ? 90 : 73} -30 Q78 -95 42 -115 Z" fill="transparent" stroke="transparent"/>
+      </g>
+    </g>`;
+  }
+
+  // 高凳上垂下的小腿，原点是凳面中心；只画在两条凳腿之间，像是从凳面后面伸出来。
+  function stoolLegs(wear, cloth, id) {
+    const dark = (hex, k) => "#" + hex.slice(1).match(/../g).map((c) => Math.round(parseInt(c, 16) * k).toString(16).padStart(2, "0")).join("");
+    const shade = (fill, gid) => `<linearGradient id="${gid}"><stop stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#1c1410" stop-opacity=".35"/></linearGradient>`;
+    const leg = (x, fill) => `<rect x="${x}" y="17" width="14" height="38" rx="6" fill="${fill}"/><rect x="${x}" y="17" width="14" height="38" rx="6" fill="url(#${id}-leg)"/>`;
+    if (wear === "casual") {
+      const pants = dark(cloth, .42);
+      return `<g class="guest-legs" filter="url(#guest-soft)"><defs>${shade(pants, id + "-leg")}</defs>
+        ${leg(-17, pants)}${leg(3, pants)}
+        <path d="M-20 56 q0 -6 10 -6 q10 0 11 6 q0 5 -10 5 q-11 0 -11 -5 Z M-1 56 q1 -6 11 -6 q10 0 10 6 q0 5 -11 5 q-10 0 -10 -5 Z" fill="#6e4a34"/>
+        <path d="M-17 52 h11 M3 52 h11" stroke="#f3e6d2" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+      </g>`;
+    }
+    const hem = dark(cloth, .62);
+    return `<g class="guest-legs" filter="url(#guest-soft)"><defs>${shade(hem, id + "-leg")}</defs>
+      <rect x="-15" y="34" width="11" height="18" rx="5" fill="#f7f1e6"/><rect x="4" y="34" width="11" height="18" rx="5" fill="#f7f1e6"/>
+      <path d="M-22 15 H22 L20 40 Q0 46 -20 40 Z" fill="${hem}"/><path d="M-22 15 H22 L20 40 Q0 46 -20 40 Z" fill="url(#${id}-leg)"/>
+      <rect x="-18" y="51" width="16" height="6" rx="3" fill="#9a6a45"/><rect x="2" y="51" width="16" height="6" rx="3" fill="#9a6a45"/>
+      <path d="M-10 51 v-4 M10 51 v-4" stroke="#b6423a" stroke-width="2.5" stroke-linecap="round"/>
     </g>`;
   }
 
