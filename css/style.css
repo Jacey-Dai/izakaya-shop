@@ -532,3 +532,101 @@ button:focus-visible, .link:focus-visible { outline: 3px solid #686d50; outline-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* 小票本（T-53） */
+.receipt-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.receipt-row { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; text-align: left; padding: 10px 14px; border: 1px solid #e2cfb3; border-radius: 12px; background: #fffdf7; color: inherit; font: inherit; cursor: pointer; }
+.receipt-row:hover, .receipt-row:focus-visible { background: #f7ead6; }
+.receipt-row small { display: block; color: var(--sumi-soft); font-size: 12px; }
+.stamp-mini { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--shu); color: var(--shu); display: grid; place-items: center; font-family: var(--font-brush); }
+.receipt-meta { text-align: center; margin-bottom: 0; }
+
+/* 定食（T-26） */
+.set-note { margin-top: 10px; }
+.set-item .name .set-today { display: block; color: var(--shu); font-size: 12px; margin-top: 2px; }
+.set-item .price s { color: var(--sumi-soft); font-size: .8em; font-weight: 400; margin-right: 2px; }
+.set-badge { width: 44px; height: 44px; border-radius: 14px; border: 2px solid var(--shu); color: var(--shu); background: #fffdf7; display: grid; place-items: center; font-family: var(--font-brush); font-size: 24px; margin: auto; }
+
+/* 积分卡和抽奖（T-40） */
+.jp { font-size: .55em; color: var(--sumi-soft); font-weight: 400; margin-left: 6px; }
+.stamp-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-width: 360px; margin: 16px auto 6px; padding: 16px; background: #fffdf7; border: 2px dashed #d9c2a0; border-radius: 16px; }
+.stamp-slot { aspect-ratio: 1; border-radius: 50%; border: 2px dotted #d9c2a0; display: grid; place-items: center; color: #cdb898; font-size: 14px; }
+.stamp-slot.on { border: 3px solid var(--shu); color: var(--shu); font-family: var(--font-brush); font-size: 22px; background: #fbe9e0; transform: rotate(var(--r)); animation: stamp-in .35s ease-out backwards; }
+@keyframes stamp-in { from { transform: scale(1.6) rotate(var(--r)); opacity: 0; } }
+.card-count { text-align: center; margin: 4px 0 10px; font-weight: 700; }
+.card-hint { text-align: center; color: var(--sumi-soft); font-size: 13px; margin: 6px 0; }
+.card-odds { color: var(--sumi-soft); font-size: 12px; text-align: center; margin-top: 16px; }
+.ticket-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.ticket { position: relative; min-width: 120px; padding: 10px 16px; border-radius: 10px; background: #fffdf7; border: 2px solid var(--tc); border-left-width: 10px; text-align: center; box-shadow: 0 3px 8px #93683b1a; }
+.ticket b { display: block; font-size: 16px; }
+.ticket-jp { display: block; font-family: var(--font-brush); color: var(--tc); font-size: 13px; }
+.ticket-n { position: absolute; top: -8px; right: -8px; background: var(--shu); color: #fff; border-radius: 10px; padding: 0 6px; font-size: 12px; }
+.draw { text-align: center; }
+.draw-stage { display: flex; justify-content: center; align-items: flex-end; gap: 8px; }
+.draw-box { width: 110px; height: 110px; animation: box-shake 1.3s ease-in-out; transform-origin: 50% 90%; }
+@keyframes box-shake {
+  0%, 100% { transform: rotate(0); }
+  15%, 45%, 75% { transform: rotate(-12deg); }
+  30%, 60%, 90% { transform: rotate(12deg); }
+}
+.draw > .bubble { margin: 12px auto; max-width: 420px; }
+.prize-reveal { animation: prize-in .5s ease-out 1.4s backwards; }
+.prize-reveal .ticket { display: inline-block; transform: scale(1.15); margin: 6px 0 10px; }
+@keyframes prize-in { from { opacity: 0; transform: translateY(12px) scale(.9); } }
+.stamp-note { color: var(--shu); font-weight: 700; }
+
+/* 拍照模式（T-54） */
+.photo-preview { display: block; width: 100%; height: auto; margin: 12px 0; border-radius: 10px; box-shadow: 0 4px 14px #93683b26; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* 生日彩蛋（T-58） */
+.bday-row select { font: inherit; padding: 4px 8px; border: 1px solid #d9c2a0; border-radius: 8px; background: #fffdf7; color: inherit; margin-right: 6px; }
+.bday-row small { display: block; color: var(--sumi-soft); font-size: 12px; margin-top: 4px; }
+.candle-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flame .5s ease-in-out infinite alternate; }
+@keyframes flame { from { transform: scale(1, 1) rotate(-4deg); } to { transform: scale(.85, 1.12) rotate(4deg); } }
+
+/* 节日装饰与雨天（T-55 / T-56）；减少动态效果时全局关闭动画，只剩静态画面 */
+.rain-fall { animation: rain-fall .7s linear infinite; }
+@keyframes rain-fall { to { transform: translate(0, 80px); } }
+.rain-drop { transform-box: fill-box; animation: rain-drip 1.4s ease-in infinite; }
+@keyframes rain-drip { 0%, 40% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(46px); opacity: 0; } }
+.deco .sway { transform-box: fill-box; transform-origin: 50% 0; animation: sway 2.6s ease-in-out infinite alternate; }
+@keyframes sway { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+.deco-glow { animation: glow 2.2s ease-in-out infinite alternate; }
+@keyframes glow { from { opacity: .55; } to { opacity: 1; } }
+.petal { transform-box: fill-box; animation: petal-fall var(--dur, 7s) linear infinite; }
+@keyframes petal-fall {
+  from { translate: 0 -820px; rotate: 0deg; }
+  50% { translate: 40px 0; }
+  to { translate: -10px 820px; rotate: 360deg; }
+}
+
+/* 当厨师（T-10 ~ T-12） */
+.role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+.role-card { display: grid; justify-items: center; gap: 6px; padding: 14px; border: 2px solid #e2cfb3; border-radius: 16px; background: #fffdf7; color: inherit; font: inherit; cursor: pointer; text-align: center; }
+.role-card.active { border-color: var(--shu); background: #fbeee6; }
+.role-card:hover, .role-card:focus-visible { background: #f7ead6; }
+.role-card b { font-size: 18px; }
+.role-card span { color: var(--sumi-soft); font-size: 13px; }
+.role-art { width: 120px; height: 132px; border-radius: 20px; }
+.order-wrap { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.order-ticket { list-style: none; margin: 10px 0 0; padding: 10px 14px; background: #fffdf7; border: 1px dashed #c9ac84; border-radius: 10px; display: grid; gap: 4px; }
+.order-ticket li { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.order-ticket span { font-weight: 700; color: var(--shu); }
+.plating { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: start; margin-top: 10px; }
+.plating-case { display: grid; gap: 6px; }
+.cut-btn { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid #e2cfb3; border-radius: 10px; background: #fffdf7; color: inherit; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.cut-btn:hover, .cut-btn:focus-visible { background: #f7ead6; }
+.plating-board { position: relative; aspect-ratio: 1; max-width: 340px; width: 100%; margin: 0 auto; border-radius: 50%; background: radial-gradient(circle, #fbf7ef 0 58%, #ece3d2 59% 66%, #f7f1e6 67%); border: 3px solid #c9ac84; box-shadow: inset 0 0 0 10px #f7f1e6, 0 6px 14px #93683b26; touch-action: none; overflow: hidden; }
+.plating-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 22%; text-align: center; color: var(--sumi-soft); font-size: 13px; margin: 0; }
+.pslice { position: absolute; cursor: grab; touch-action: none; line-height: 0; }
+.pslice:active { cursor: grabbing; }
+.pslice.sel, .pslice:focus-visible { outline: 2px dashed var(--shu); outline-offset: 2px; border-radius: 8px; }
+.stars { font-size: 40px; color: #e9b73a; letter-spacing: 6px; }
+.stars span { color: #e2d6c2; }
+@media (max-width: 640px) {
+  .role-cards { grid-template-columns: 1fr; }
+  .order-wrap { grid-template-columns: 1fr; justify-items: center; }
+  .plating { grid-template-columns: 1fr; }
+  .plating-case { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+}

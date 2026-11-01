@@ -39,7 +39,9 @@
     }
   });
   const itemById = {};
-  D.menu.forEach((cat) => cat.items.forEach((it) => { itemById[it.id] = it; }));
+  D.menu.forEach((cat) => (cat.items || []).forEach((it) => { itemById[it.id] = it; }));
+  const setById = Object.fromEntries(D.sets.map((st) => [st.id, st]));
+  const prizeById = Object.fromEntries(D.prizes.map((p) => [p.id, p]));
 
   // ---------- 语言 ----------
   // 界面文案查 I18N；内容数据中文在 data.js，英文在 data.en.js，缺英文时回退中文
@@ -58,6 +60,10 @@
   const fishText = (f, field) => tx("fish", f.id, field, f[field]);
   const itemName = (it) => (it.fish && it.id.startsWith("s-") ? fishName(fishById[it.fish[0]]) : tx("menu", it.id, "name", it.name));
   const itemDesc = (it) => (it.id.startsWith("s-") ? t("menu.sashimiDesc") : tx("menu", it.id, "desc", it.desc));
+  const setName = (st) => tx("sets", st.id, "name", st.name);
+  const setDesc = (st) => tx("sets", st.id, "desc", st.desc);
+  const festText = (f, field) => tx("festivals", f.id, field, f[field]);
+  const prizeText = (p, field) => tx("prizes", p.id, field, p[field]);
   const catName = (c) => (isEn() && EN.categories && EN.categories[c.id]) || c.name;
   const seatName = (s) => tx("seats", s.id, "name", s.name);
   const seatDesc = (s) => tx("seats", s.id, "desc", s.desc);
@@ -88,20 +94,61 @@
     orderMode: "dine",
     luck: 0,
     omakase: null,
+    // 小票本（T-53）：最近 20 张小票；来店次数 = 下单次数，供积分卡、常客故事使用
+    receipts: store.get("receipts", []),
+    visits: store.get("visits", 0),
+    // 积分卡（T-40）：当前章数（0–10）和抽到的奖品 [{ id, at }]
+    stamps: store.get("stamps", 0),
+    prizes: store.get("prizes", []),
+    // 生日彩蛋（T-58）：{ m, d } 只存在本机；bdayYear 记录今年是否已经庆祝过
+    // 当厨师（T-10）：role = guest / chef；npc 是当前来点单的客人；plating 是盘子上摆的鱼片
+    role: store.get("role", "guest"),
+    npc: null,
+    plating: [],
+    plateSel: -1,
+    chefStats: store.get("chefStats", { served: 0, stars: 0 }),
+    birthday: store.get("birthday", null),
+    bdayYear: store.get("bdayYear", 0),
     menuTab: "sashimi",
     zukanFilter: "all",
   };
 
-  // 今日鲜货：按日期固定随机，同一天每次打开都一样
-  const todaysFresh = (() => {
+  // 按日期固定的随机数：同一天每次打开都一样。salt 让不同用途各自独立
+  function dailyRand(salt = 0) {
     const d = new Date();
-    let seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-    const rand = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-    const pool = [...menuFish];
+    let seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate() + salt;
+    return () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  }
+  const dailyPick = (list, n, salt) => {
+    const rand = dailyRand(salt);
+    const pool = [...list];
     const out = [];
-    while (out.length < 4 && pool.length) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
+    while (out.length < n && pool.length) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
     return out;
+  };
+  // ---------- 节日与天气（T-55 / T-56） ----------
+  // ?date=2026-07-07 预览其他日期的节日和天气，?weather=rain / clear 强制天气
+  const params = new URLSearchParams(location.search);
+  const sceneDate = (() => {
+    const q = params.get("date");
+    const d = q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? new Date(q + "T12:00:00") : null;
+    return d && !isNaN(d) ? d : new Date();
   })();
+  const mmdd = (d) => String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const festival = D.festivals.find((f) => f.from <= mmdd(sceneDate) && mmdd(sceneDate) <= f.to) || null;
+  const rainy = (() => {
+    const w = params.get("weather");
+    if (w === "rain") return true;
+    if (w === "clear") return false;
+    let seed = sceneDate.getFullYear() * 10000 + (sceneDate.getMonth() + 1) * 100 + sceneDate.getDate() + 13;
+    for (let i = 0; i < 3; i++) seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280 < (sceneDate.getMonth() === 5 ? D.rain.juneChance : D.rain.chance);
+  })();
+
+  // 今日鲜货
+  const todaysFresh = dailyPick(menuFish, 4, 0);
+  // 握寿司定食今天的 3 款（每款一贯两件，共 6 贯）
+  const todaysNigiri = dailyPick(D.menu.find((c) => c.id === "sushi").items.filter((it) => /^[ng]-/.test(it.id)), 3, 7);
 
   // ---------- 小组件 ----------
   // 插画在 art.js：刺身片、握寿司 / 军舰、细卷、木屐盘、外带盒
@@ -274,7 +321,7 @@
   function guestSay(text) {
     const guest = $("#guest");
     if (guest.style.display === "none") return;
-    const seat = D.seats.find((s) => s.id === state.seat);
+    const seat = shownSeat();
     // 玩偶在吧台高 190、座敷高 220（见 guestSVG），字放在头部右上方
     say(seat.marker[0] + 80, seat.marker[1] - (seat.id === "counter" ? 160 : 190), text);
   }
@@ -287,7 +334,9 @@
 
   // 盘子放进当前房间、排在热点之前：画在背景上，重叠处仍由原热点接收点击。
   // 换房间时按新房间的落点和大小重画，已经吃掉的那几贯保持隐藏。
-  const dishState = { art: null, mode: "dine", eaten: 0, busy: false };
+  const dishState = { art: null, mode: "dine", eaten: 0, busy: false, serving: false };
+  // 给读屏用户的播报（上菜、还剩几贯）
+  const announce = (msg) => { $("#live-status").textContent = msg; };
   function placeDish(room) {
     const dish = $("#scene-dish");
     const { to: [x, y], width } = DISH_SPOTS[room];
@@ -310,18 +359,22 @@
   }
 
   // 吧台：春田先切鱼、捏寿司，再把盘子递过来；盘子留在座位上，点它一贯一贯吃掉。
-  // 没有鱼的订单（只点饮料等）不端盘子。
-  async function serveDish(lines, mode, done) {
+  // 没有鱼的订单（只点饮料等）不端盘子。special = { art, say } 用于生日玉子烧这类不是订单的盘子。
+  async function serveDish(lines, mode, done, special = null) {
     const fishList = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
     const dish = $("#scene-dish");
     hideDish();
-    if (!fishList.length) { done(); return; }
+    if (!fishList.length && !special) { done(); return; }
     dishState.busy = true;
-    chefSay("トントン");
+    dishState.serving = true;
+    chefSay(special ? special.say : "トントン");
     await chefAct("act-slice", 700);
-    chefSay("ぎゅっ");
-    await chefAct("act-nigiri", 700);
-    Object.assign(dishState, { art: mode === "takeout" ? ART.takeoutBox(fishList) : ART.geta(fishList), mode, eaten: 0 });
+    if (!special) {
+      chefSay("ぎゅっ");
+      await chefAct("act-nigiri", 700);
+    }
+    const art = special ? special.art : mode === "takeout" ? ART.takeoutBox(fishList) : ART.geta(fishList);
+    Object.assign(dishState, { art, mode, eaten: 0 });
     const room = $(".scene").dataset.room;
     placeDish(room);
     dish.setAttribute("aria-label", hotspotInfo("dish").title);
@@ -335,6 +388,8 @@
       { transform: "none", opacity: 1 },
     ], 1300);
     dishState.busy = false;
+    dishState.serving = false;
+    announce(t("live.served", { n: $$(".bite", dish).length }));
     done();
   }
 
@@ -355,6 +410,7 @@
       await animate(left[0], [{ opacity: 1 }, { transform: "translate(0px, -40px) scale(.6)", opacity: 0 }], 450);
       left[0].setAttribute("display", "none");
       dishState.eaten += 1;
+      if (left.length > 1) announce(t("live.left", { n: left.length - 1 }));
       if (left.length === 1) {
         await wait(250);
         guestSay("ごちそうさま！");
@@ -376,6 +432,93 @@
     ], 900);
     hideDish();
     toast(pick(chefLine("cleared")));
+  }
+
+  // ---------- 节日装饰与雨天的画面 ----------
+  // 坐标与 viewBox 一致：[x, y, 缩放]，y 是装饰底部落地的位置
+  const DECO_SPOTS = {
+    kadomatsu: { counter: [66, 660, 1.25], tatami: [400, 494, 1.1] },
+    tanabata: { counter: [1012, 505, 1], tatami: [882, 494, 1] },
+    pumpkin: { counter: [962, 490, 1.1], tatami: [404, 498, 1] },
+    tree: { counter: [962, 490, 1.15], tatami: [404, 498, 1.1] },
+    umbrella: { counter: [138, 645, 1.1], tatami: [228, 530, 0.95] },
+  };
+  // 雨：吧台看得到门边的障子，座敷看得到院子的窗；暖帘下摆滴水
+  const RAIN_VIEWS = {
+    counter: { win: [28, 295, 137, 297], drops: [[45, 284], [80, 288], [118, 290], [155, 292], [188, 294]] },
+    tatami: { win: [452, 226, 358, 182], drops: [[40, 256], [80, 260], [120, 262], [160, 266], [192, 266]] },
+  };
+  const decoAt = (kind, room) => {
+    const [x, y, k] = DECO_SPOTS[kind][room];
+    return `<g class="deco deco-${kind}" transform="translate(${x} ${y}) scale(${k})">${ART.deco(kind)}</g>`;
+  };
+  function renderAtmosphere() {
+    const scene = $(".scene");
+    if (rainy) {
+      scene.querySelector("defs").insertAdjacentHTML("beforeend", `
+        <pattern id="rain-pat" width="40" height="80" patternUnits="userSpaceOnUse">
+          <path d="M6 0 l-4 16 M26 30 l-4 16 M16 56 l-4 16 M36 12 l-3 12" stroke="#eef4fa" stroke-width="2.2" stroke-linecap="round" opacity=".9"/>
+        </pattern>`);
+    }
+    $$(".room-layer").forEach((layer) => {
+      const room = layer.dataset.room;
+      let html = "";
+      if (rainy) {
+        const { win: [x, y, w, h], drops } = RAIN_VIEWS[room];
+        html += `
+          <clipPath id="rain-clip-${room}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath>
+          <g class="rain" clip-path="url(#rain-clip-${room})">
+            <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#41557e" opacity=".32"/>
+            <rect class="rain-fall" x="${x}" y="${y - 80}" width="${w}" height="${h + 80}" fill="url(#rain-pat)"/>
+          </g>
+          ${drops.map(([dx, dy], i) => `<ellipse class="rain-drop" style="animation-delay:${(i * 0.37) % 1.4}s" cx="${dx}" cy="${dy}" rx="2.4" ry="3.4" fill="#cfe0f0" stroke="#7fa6c8" stroke-width=".8"/>`).join("")}
+          ${decoAt("umbrella", room)}`;
+      }
+      if (festival && DECO_SPOTS[festival.deco]) html += decoAt(festival.deco, room);
+      if (!html) return;
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "atmo");
+      g.setAttribute("pointer-events", "none");
+      g.setAttribute("aria-hidden", "true");
+      g.innerHTML = html;
+      layer.querySelector(".hotspot").before(g);
+    });
+    // 樱花季：花瓣从上往下飘，画在最上层但不挡点击
+    if (festival && festival.deco === "petals") {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "atmo petals");
+      g.setAttribute("pointer-events", "none");
+      g.setAttribute("aria-hidden", "true");
+      g.innerHTML = Array.from({ length: 18 }, (_, i) => {
+        const x = (i * 211) % 1200, y = (i * 137) % 760;
+        return `<path class="petal" style="--dur:${6 + (i % 5)}s;animation-delay:-${(i * 0.9) % 6}s" transform="translate(${x} ${y}) rotate(${i * 40})" d="M0 0 q6 -8 12 0 q-6 9 -12 0 Z" fill="#f6c3cf" stroke="#d9879a" stroke-width=".8"/>`;
+      }).join("");
+      scene.appendChild(g);
+    }
+  }
+
+  // ---------- 生日彩蛋（T-58） ----------
+  // 2 月 29 日生日在平年的 2 月 28 日庆祝
+  function isBirthday(date = new Date()) {
+    const b = state.birthday;
+    if (!b) return false;
+    const y = date.getFullYear();
+    const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    const [m, d] = b.m === 2 && b.d === 29 && !leap ? [2, 28] : [b.m, b.d];
+    return date.getMonth() + 1 === m && date.getDate() === d;
+  }
+  // 坐下、没有别的盘子、没有弹窗时才端；今年庆祝过就不再端
+  function maybeBirthday() {
+    const year = new Date().getFullYear();
+    if (isChef() || !isBirthday() || state.bdayYear === year || !state.seat || dishState.serving || dishState.art || current) return;
+    state.bdayYear = year;
+    store.set("bdayYear", year);
+    toast(t("bday.toast"), true);
+    serveDish([], "dine", () => {
+      guestSay("わあ！");
+      guestAct("act-happy", 900);
+      announce(t("bday.live"));
+    }, { art: ART.tamagoyaki(), say: "おめでとう！" });
   }
 
   // 镜头只从已有 seat 派生，刷新与旧存档无需新增状态或迁移。
@@ -421,6 +564,8 @@
     $("#hud-seat").focus();
   });
 
+  const isChef = () => state.role === "chef";
+  const shownSeat = () => D.seats.find((s) => s.id === (isChef() ? "counter" : state.seat));
   function updateHud() {
     const count = state.cart.reduce((s, l) => s + l.qty, 0);
     const cartBtn = $("#hud-cart");
@@ -429,15 +574,23 @@
     $("#hud-seat").textContent = t("hud.seat", { name: seat ? seatName(seat) : t("hud.seatNone") });
     $("#hud-zukan").textContent = t("hud.zukan", { n: state.collected.size, total: D.fish.length });
 
-    updateRoom(seat);
+    $("#hud-role").textContent = t("hud.role", { name: t(isChef() ? "role.chef" : "role.guest") });
+
+    // 当厨师时镜头固定在吧台，吧台上坐的是来点单的客人
+    const shown = shownSeat();
+    const look = isChef() ? state.npc.look : state.guest;
+    updateRoom(shown);
     const guest = $("#guest");
-    if (seat) {
-      guest.setAttribute("transform", `translate(${seat.marker[0]} ${seat.marker[1]})`);
-      guest.innerHTML = guestSVG(state.guest);
-      guest.style.display = "";
-    } else {
-      guest.style.display = "none";
+    // 只在座位或形象变了时重画客人，加菜时不打断正在做的动作
+    const guestKey = shown ? (isChef() ? "npc:" : "") + shown.id + JSON.stringify(look) : "";
+    if (guest.dataset.key !== guestKey) {
+      guest.dataset.key = guestKey;
+      if (shown) {
+        guest.setAttribute("transform", `translate(${shown.marker[0]} ${shown.marker[1]})`);
+        guest.innerHTML = guestSVG(look, shown.id);
+      }
     }
+    guest.style.display = shown ? "" : "none";
   }
 
   function bumpCart() {
@@ -460,11 +613,47 @@
   // 订单行的名称和备注在显示时才生成，切换语言后也会跟着变
   function lineName(l) {
     if (l.kind === "item") return itemName(itemById[l.key]);
+    if (l.kind === "set") return setName(setById[l.set]);
     return t(l.kind === "omakase" ? "chef.omakaseName" : "case.plateName");
   }
   function lineNote(l) {
+    if (l.kind === "set") {
+      const fish = (l.nigiri || []).map((id) => itemName(itemById[id]))
+        .concat(l.nigiri ? [] : (l.fish || []).map((id) => fishName(fishById[id])));
+      return fish.concat(setById[l.set].parts.map((id) => itemName(itemById[id]))).join(" · ");
+    }
     if (!l.counts) return "";
     return Object.entries(l.counts).map(([id, n]) => fishName(fishById[id]) + (n > 1 ? "×" + n : "")).join(" · ");
+  }
+
+  // ---------- 定食（T-26） ----------
+  const SET_RATE = 0.85;
+  // 套餐的鱼：omakase 每次点都重新挑，其余按日期固定
+  function setContents(st, omakaseFish) {
+    let fish = [], nigiri = null, base = 0;
+    if (st.pick === "fresh3") { fish = todaysFresh.slice(0, 3); base = fish.reduce((s, f) => s + f.price, 0); }
+    if (st.pick === "daily3") {
+      nigiri = todaysNigiri.map((it) => it.id);
+      fish = todaysNigiri.flatMap((it) => it.fish.map((id) => fishById[id]));
+      base = todaysNigiri.reduce((s, it) => s + it.price, 0);
+    }
+    if (st.pick === "omakase" && omakaseFish) { fish = omakaseFish; base = fish.reduce((s, f) => s + f.price, 0); }
+    base += st.parts.reduce((s, id) => s + itemById[id].price, 0);
+    return { fish, nigiri, base, price: Math.round(base * SET_RATE) };
+  }
+
+  function addSet(id) {
+    const st = setById[id];
+    if (!st) return;
+    const random = st.pick === "omakase";
+    const c = setContents(st, random ? rollOmakase().fish : null);
+    addToCart({
+      // 按日期固定的套餐同一单里合并数量；omakase 套餐每份的鱼不同，分开列
+      key: random ? st.id + "-" + Date.now() : st.id,
+      kind: "set", set: st.id, price: c.price,
+      fish: c.fish.map((f) => f.id),
+      ...(c.nigiri ? { nigiri: c.nigiri } : {}),
+    });
   }
 
   function addMenuItem(id) {
@@ -491,7 +680,11 @@
     view.mount && view.mount(...args);
     modal.scrollTop = 0;
   }
-  function close() { overlay.hidden = true; current = null; }
+  function close() {
+    overlay.hidden = true;
+    current = null;
+    setTimeout(maybeBirthday, 600);
+  }
   function rerender(...args) { if (current) open(current, ...(args.length ? args : currentArgs)); }
 
   $("#modal-close").addEventListener("click", close);
@@ -502,13 +695,390 @@
   body.addEventListener("click", (e) => {
     const add = e.target.closest("[data-add]");
     if (add) { addMenuItem(add.dataset.add); return; }
+    const set = e.target.closest("[data-set]");
+    if (set) { addSet(set.dataset.set); return; }
     const go = e.target.closest("[data-open]");
     if (go) open(go.dataset.open);
   });
   $$(".hud [data-open]").forEach((b) => b.addEventListener("click", () => open(b.dataset.open)));
 
+  // ---------- 拍照模式（T-54） ----------
+  // 复制场景 SVG，把图片转成 data URL、把 CSS 算出的样式写进属性，画到 Canvas 上，再加店名、日期和印章。
+  // file:// 打开时浏览器不允许读本地图片，会提示用线上地址。
+  const STYLE_PROPS = ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity", "opacity", "font-family", "font-size", "font-weight", "letter-spacing", "text-anchor", "dominant-baseline", "writing-mode", "visibility", "filter"];
+  const toDataURL = async (url) => {
+    const blob = await (await fetch(url)).blob();
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  };
+  async function sceneImage() {
+    const scene = $(".scene");
+    const clone = scene.cloneNode(true);
+    const src = [scene, ...scene.querySelectorAll("*")];
+    const dst = [clone, ...clone.querySelectorAll("*")];
+    src.forEach((el, i) => {
+      const cs = getComputedStyle(el);
+      const style = STYLE_PROPS.map((p) => `${p}:${cs.getPropertyValue(p)}`).join(";");
+      dst[i].setAttribute("style", (dst[i].getAttribute("style") || "") + ";" + style + ";animation:none;transition:none");
+      if (cs.display === "none") dst[i].setAttribute("display", "none");
+    });
+    // 拍照时不显示悬停轮廓和提示点
+    $$(".hotspot-dot, .pop-say", clone).forEach((el) => el.remove());
+    $$(".hit-area", clone).forEach((el) => el.setAttribute("style", "fill:transparent;stroke:transparent"));
+    const grain = $("#kb-grain");
+    if (grain) clone.querySelector("defs").appendChild(grain.cloneNode(true));
+    const cache = {};
+    for (const img of $$("image", clone)) {
+      const href = img.getAttribute("href");
+      if (!href || href.startsWith("data:")) continue;
+      cache[href] = cache[href] || await toDataURL(new URL(href, location.href).href);
+      img.setAttribute("href", cache[href]);
+    }
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", 1200);
+    clone.setAttribute("height", 800);
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" }));
+    try {
+      const im = new Image();
+      im.src = url;
+      await im.decode();
+      return im;
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  async function takePhoto() {
+    if (location.protocol === "file:") { toast(t("photo.fileOnly")); return; }
+    toast(t("photo.taking"));
+    try {
+      const im = await sceneImage();
+      const c = document.createElement("canvas");
+      c.width = 1280; c.height = 960;
+      const g = c.getContext("2d");
+      g.fillStyle = "#fff8ec"; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(im, 40, 40, 1200, 800);
+      g.strokeStyle = "#96643e"; g.lineWidth = 4; g.strokeRect(40, 40, 1200, 800);
+      // 下方：店名、日期 + 座位、朱红印章
+      const seat = D.seats.find((s) => s.id === state.seat);
+      const date = new Date().toLocaleDateString(isEn() ? "en-US" : "zh-CN", { year: "numeric", month: "long", day: "numeric" });
+      g.fillStyle = "#423831";
+      g.font = '600 40px "Yuji Syuku", "Noto Serif SC", serif';
+      g.textBaseline = "middle";
+      g.fillText(isEn() ? "Kobune Sushi" : "小舟 · Kobune", 48, 900);
+      g.font = '400 24px "Noto Serif SC", serif';
+      g.fillStyle = "#796957";
+      g.textAlign = "right";
+      g.fillText(date + (seat ? " · " + seatName(seat) : ""), 1140, 900);
+      g.save();
+      g.translate(1196, 900); g.rotate(-0.12);
+      g.strokeStyle = "#ad573f"; g.lineWidth = 4; g.strokeRect(-30, -30, 60, 60);
+      g.fillStyle = "#ad573f"; g.textAlign = "center"; g.font = '600 38px "Yuji Syuku", serif';
+      g.fillText("舟", 0, 2);
+      g.restore();
+      open("photo", c.toDataURL("image/png"));
+    } catch {
+      toast(t("photo.failed"));
+    }
+  }
+
+  // ---------- 当厨师（T-10 ~ T-12） ----------
+  const CM = D.chefMode;
+  const cmText = (key, i) => {
+    const list = isEn() && EN.chefMode && EN.chefMode[key];
+    return (list && list[i]) || CM[key][i];
+  };
+  const reactionText = (stars, i) => {
+    const list = isEn() && EN.chefMode && EN.chefMode.reactions[stars];
+    return (list && list[i]) || CM.reactions[stars][i];
+  };
+  // 新客人：随机装扮，点 2–3 种常见鱼，每种 1–3 片；鱼柜里多放 2 种干扰
+  function newCustomer() {
+    const look = Object.fromEntries(Object.entries(D.guest).map(([k, opts]) => [k, pick(opts).id]));
+    const pool = menuFish.filter((f) => f.rarity <= 2).sort(() => Math.random() - 0.5);
+    const kinds = Math.random() < 0.4 ? 3 : 2;
+    const order = Object.fromEntries(pool.slice(0, kinds).map((f) => [f.id, 1 + Math.floor(Math.random() * (kinds === 3 ? 2 : 3))]));
+    const caseIds = pool.slice(0, kinds + 2).map((f) => f.id).sort(() => Math.random() - 0.5);
+    state.npc = { look, order, caseIds, intro: pickIndex(CM.orderIntro), reaction: 0 };
+    state.plating = [];
+    state.plateSel = -1;
+  }
+  const orderText = (order) => Object.entries(order).map(([id, n]) => t("plate.line", { name: fishName(fishById[id]), n })).join(t("chef.listSep"));
+
+  function setRole(role) {
+    if (dishState.serving) { toast(t("toast.busy")); return; }
+    if (role === state.role) { if (isChef()) open("chefOrder"); else close(); return; }
+    state.role = role;
+    store.set("role", role);
+    hideDish();
+    if (isChef()) {
+      newCustomer();
+      updateHud();
+      guestAct("act-sit", 500);
+      open("chefOrder");
+    } else {
+      updateHud();
+      close();
+      toast(t("role.backGuest"));
+      if (!state.seat) open("seats");
+    }
+  }
+
+  function rateDish(order, slices) {
+    const got = {};
+    slices.forEach((sl) => { got[sl.fish] = (got[sl.fish] || 0) + 1; });
+    let wrong = 0, diff = 0;
+    new Set([...Object.keys(order), ...Object.keys(got)]).forEach((id) => {
+      if (!order[id]) wrong += got[id];
+      else diff += Math.abs((got[id] || 0) - order[id]);
+    });
+    if (!wrong && !diff) return 3;
+    if (!wrong && diff <= 1) return 2;
+    return 1;
+  }
+
+  // 上菜：盘子按玩家摆的样子端给客人，客人评价后自己吃完，春田（你）收盘，下一位客人进店
+  function serveToNpc() {
+    if (!state.plating.length) { toast(t("plate.empty")); return; }
+    if (dishState.serving) { toast(t("toast.busy")); return; }
+    const npc = state.npc;
+    const stars = rateDish(npc.order, state.plating);
+    const used = [...new Set(state.plating.map((sl) => sl.fish))];
+    const fresh = used.filter((id) => !state.collected.has(id));
+    fresh.forEach((id) => { state.collected.add(id); state.fresh.add(id); });
+    store.set("zukan", [...state.collected]);
+    store.set("fresh", [...state.fresh]);
+    state.chefStats.served += 1;
+    state.chefStats.stars += stars;
+    store.set("chefStats", state.chefStats);
+    const bonus = stars === 3 && state.stamps < STAMP_MAX;
+    if (bonus) { state.stamps += 1; store.set("stamps", state.stamps); }
+    npc.reaction = pickIndex(CM.reactions[stars]);
+    const art = ART.platter(state.plating.map((sl) => ({ ...sl, fish: fishById[sl.fish] })));
+    state.plating = [];
+    state.plateSel = -1;
+    updateHud();
+    close();
+    serveDish([], "dine", () => {
+      guestSay(stars === 3 ? "おいしい！" : stars === 2 ? "うん！" : "あれ？");
+      guestAct(stars > 1 ? "act-happy" : "act-chomp", 900);
+      open("chefResult", stars, fresh, bonus);
+      npcEats();
+    }, { art, say: "お待ち！" });
+  }
+
+  async function npcEats() {
+    await wait(1600);
+    while (isChef() && dishState.art) {
+      await eatDish();
+      await wait(650);
+    }
+    if (!isChef()) return;
+    newCustomer();
+    updateHud();
+    guestAct("act-sit", 500);
+    toast(t("order.nextArrived"));
+  }
+
+  const sliceSVG = (f, w = 40) => `<svg viewBox="0 0 40 60" width="${w}" height="${w * 1.5}" aria-hidden="true">${ART.slicePiece(f)}</svg>`;
+
   // ---------- 各个视图 ----------
   const views = {};
+
+  views.role = {
+    cls: "book",
+    render: () => {
+      const st = state.chefStats;
+      return `
+        <h2>${t("role.title")}</h2>
+        <p class="sub">${t("role.sub")}</p>
+        <div class="role-cards">
+          <button class="role-card ${isChef() ? "" : "active"}" data-role="guest" aria-pressed="${!isChef()}">
+            <svg viewBox="-125 -255 250 275" class="role-art" aria-hidden="true"><rect x="-125" y="-255" width="250" height="275" fill="#f4e6d1"/>${guestSVG(state.guest, "preview")}</svg>
+            <b>${t("role.guest")}</b><span>${t("role.guestDesc")}</span>
+          </button>
+          <button class="role-card ${isChef() ? "active" : ""}" data-role="chef" aria-pressed="${isChef()}">
+            ${chefPortrait()}
+            <b>${t("role.chef")}</b><span>${t("role.chefDesc")}</span>
+          </button>
+        </div>
+        <p class="card-hint">${t("role.look")}</p>
+        ${st.served ? `<p class="card-hint">${t("role.stats", { n: st.served, avg: (st.stars / st.served).toFixed(1) })}</p>` : ""}`;
+    },
+    mount: () => {
+      $$("[data-role]", body).forEach((b) => b.addEventListener("click", () => setRole(b.dataset.role)));
+    },
+  };
+
+  views.chefOrder = {
+    cls: "book",
+    render: () => {
+      const npc = state.npc;
+      return `
+        <h2>${t("order.title")}</h2>
+        <div class="order-wrap">
+          <svg viewBox="-125 -255 250 275" class="role-art" aria-hidden="true"><rect x="-125" y="-255" width="250" height="275" fill="#f4e6d1"/>${guestSVG(npc.look, "preview")}</svg>
+          <div>
+            <div class="bubble">${cmText("orderIntro", npc.intro)}</div>
+            <ul class="order-ticket">
+              ${Object.entries(npc.order).map(([id, n]) => `<li>${sliceSVG(fishById[id], 22)}<b>${fishName(fishById[id])}</b><span>× ${n}</span></li>`).join("")}
+            </ul>
+          </div>
+        </div>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn primary" data-open="plating">${t("order.start")}</button>
+          <button class="btn" id="npc-next">${t("order.next")}</button>
+          <button class="btn" data-open="role">${t("role.pick")}</button>
+        </div>`;
+    },
+    mount: () => {
+      $("#npc-next", body).addEventListener("click", () => {
+        if (dishState.serving || dishState.art) { toast(t("toast.busy")); return; }
+        newCustomer(); updateHud(); guestAct("act-sit", 500); rerender();
+      });
+    },
+  };
+
+  views.plating = {
+    cls: "book",
+    render: () => {
+      const npc = state.npc;
+      const n = state.plating.length;
+      return `
+        <h2>${t("plate.title")}</h2>
+        <p class="sub">${t("plate.order", { list: orderText(npc.order) })}</p>
+        <div class="plating">
+          <div class="plating-case" role="group" aria-label="${t("plate.case")}">
+            ${npc.caseIds.map((id) => `<button class="cut-btn" data-cut="${id}">${sliceSVG(fishById[id], 26)}<span>${fishName(fishById[id])}</span></button>`).join("")}
+          </div>
+          <div class="plating-board" id="plating-board">
+            ${state.plating.map((sl, i) => `<div class="pslice ${i === state.plateSel ? "sel" : ""}" data-i="${i}" tabindex="0" role="button" aria-label="${t("plate.slice", { name: fishName(fishById[sl.fish]) })}" style="left:${sl.x * 100}%;top:${sl.y * 100}%;z-index:${sl.z};transform:translate(-50%,-50%) rotate(${sl.r}deg)">${sliceSVG(fishById[sl.fish], 40)}</div>`).join("")}
+            ${n ? "" : `<p class="plating-empty">${t("plate.prompt")}</p>`}
+          </div>
+        </div>
+        <p class="card-hint">${t("plate.hint")} · ${t("plate.count", { n, max: CM.maxSlices })}</p>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn" id="plate-rotate" ${state.plateSel < 0 ? "disabled" : ""}>${t("plate.rotate")}</button>
+          <button class="btn" id="plate-clear" ${n ? "" : "disabled"}>${t("plate.clear")}</button>
+          <button class="btn" id="plate-shuffle" ${n ? "" : "disabled"}>${t("plate.shuffle")}</button>
+          <button class="btn primary" id="plate-serve" ${n ? "" : "disabled"}>${t("plate.serve")}</button>
+        </div>`;
+    },
+    mount: () => {
+      const board = $("#plating-board", body);
+      let top = Math.max(0, ...state.plating.map((sl) => sl.z));
+      const clamp = (v) => Math.min(0.86, Math.max(0.14, v));
+      const place = (el, sl) => {
+        el.style.left = sl.x * 100 + "%";
+        el.style.top = sl.y * 100 + "%";
+        el.style.zIndex = sl.z;
+        el.style.transform = `translate(-50%,-50%) rotate(${sl.r}deg)`;
+      };
+      const select = (i) => {
+        state.plateSel = i;
+        $$(".pslice", board).forEach((el) => el.classList.toggle("sel", Number(el.dataset.i) === i));
+        $("#plate-rotate", body).disabled = i < 0;
+      };
+      $$("[data-cut]", body).forEach((b) => b.addEventListener("click", () => {
+        if (state.plating.length >= CM.maxSlices) { toast(t("plate.full")); return; }
+        chefSay("トン");
+        chefAct("act-slice", 500);
+        state.plating.push({ fish: b.dataset.cut, x: 0.3 + Math.random() * 0.4, y: 0.3 + Math.random() * 0.4, r: Math.round(Math.random() * 60 - 30), z: top + 1 });
+        state.plateSel = state.plating.length - 1;
+        rerender();
+      }));
+      $$(".pslice", board).forEach((el) => {
+        const i = Number(el.dataset.i);
+        const sl = state.plating[i];
+        el.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          select(i);
+          sl.z = ++top;
+          place(el, sl);
+          el.setPointerCapture(e.pointerId);
+          const move = (ev) => {
+            const r = board.getBoundingClientRect();
+            sl.x = clamp((ev.clientX - r.left) / r.width);
+            sl.y = clamp((ev.clientY - r.top) / r.height);
+            place(el, sl);
+          };
+          const up = () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerup", up); el.removeEventListener("pointercancel", up); };
+          el.addEventListener("pointermove", move);
+          el.addEventListener("pointerup", up);
+          el.addEventListener("pointercancel", up);
+        });
+        el.addEventListener("wheel", (e) => { e.preventDefault(); select(i); sl.r = (sl.r + (e.deltaY > 0 ? 15 : -15)) % 360; place(el, sl); }, { passive: false });
+        // 键盘：方向键移动，R 旋转
+        el.addEventListener("keydown", (e) => {
+          const step = { ArrowLeft: [-0.04, 0], ArrowRight: [0.04, 0], ArrowUp: [0, -0.04], ArrowDown: [0, 0.04] }[e.key];
+          if (step) { e.preventDefault(); sl.x = clamp(sl.x + step[0]); sl.y = clamp(sl.y + step[1]); }
+          else if (e.key === "r" || e.key === "R") sl.r = (sl.r + 30) % 360;
+          else return;
+          select(i);
+          place(el, sl);
+        });
+        el.addEventListener("focus", () => select(i));
+      });
+      $("#plate-rotate", body).addEventListener("click", () => {
+        const sl = state.plating[state.plateSel];
+        if (!sl) return;
+        sl.r = (sl.r + 30) % 360;
+        place($(`.pslice[data-i="${state.plateSel}"]`, board), sl);
+      });
+      $("#plate-clear", body).addEventListener("click", () => { state.plating = []; state.plateSel = -1; rerender(); });
+      $("#plate-shuffle", body).addEventListener("click", () => {
+        state.plating.forEach((sl) => { sl.x = 0.2 + Math.random() * 0.6; sl.y = 0.2 + Math.random() * 0.6; sl.r = Math.round(Math.random() * 360); });
+        rerender();
+      });
+      $("#plate-serve", body).addEventListener("click", serveToNpc);
+    },
+  };
+
+  views.chefResult = {
+    cls: "book",
+    render: (stars, fresh, bonus) => `
+      <div class="receipt">
+        <div class="stars" role="img" aria-label="${t("result.stars", { n: stars })}">${"★".repeat(stars)}<span>${"★".repeat(3 - stars)}</span></div>
+        <h2>${t("result.title" + stars)}</h2>
+        <div class="bubble">${reactionText(stars, state.npc.reaction)}</div>
+        ${bonus ? `<p class="stamp-note">${t("result.stamp", { have: state.stamps, max: STAMP_MAX })}</p>` : ""}
+        ${fresh.length ? `<p>${t("receipt.new", { n: fresh.length })}</p><div class="unlock-row">${fresh.map((id) => cardHTML(fishById[id], true)).join("")}</div>` : ""}
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn primary" id="result-ok">${t("result.ok")}</button>
+        </div>
+      </div>`,
+    mount: () => { $("#result-ok", body).addEventListener("click", close); },
+  };
+
+  views.photo = {
+    cls: "book",
+    render: (dataUrl) => {
+      const d = new Date();
+      const name = `kobune-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}.png`;
+      return `
+        <h2>${t("photo.title")}</h2>
+        <p class="sub">${t("photo.sub")}</p>
+        <img class="photo-preview" src="${dataUrl}" alt="${t("photo.alt")}">
+        <div class="btn-row" style="justify-content:center">
+          <a class="btn primary" id="photo-save" href="${dataUrl}" download="${name}">${t("photo.save")}</a>
+          ${navigator.canShare ? `<button class="btn" id="photo-share">${t("photo.share")}</button>` : ""}
+        </div>`;
+    },
+    mount: (dataUrl) => {
+      const share = $("#photo-share", body);
+      if (!share) return;
+      share.addEventListener("click", async () => {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], "kobune.png", { type: "image/png" });
+          if (navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: shopName() });
+          else toast(t("photo.noShare"));
+        } catch { /* 用户取消分享 */ }
+      });
+    },
+  };
 
   // 暖帘：店铺介绍
   views.noren = {
@@ -522,6 +1092,7 @@
       <div class="btn-row">
         <button class="btn primary" data-open="seats">${t("btn.goSeats")}</button>
         <button class="btn" data-open="tablemenu">${t("btn.seeMenu")}</button>
+        <button class="btn" data-open="role">${t("role.pick")}</button>
       </div>`,
   };
 
@@ -585,7 +1156,7 @@
         <div class="tabs">
           ${D.menu.map((c) => `<button class="tab ${c.id === state.menuTab ? "active" : ""}" data-tab="${c.id}">${catName(c)}<small>${c.jp}</small></button>`).join("")}
         </div>
-        <ul class="menu-list">
+        ${cat.id === "sets" ? setListHTML() : `<ul class="menu-list">
           ${cat.items.map((it) => {
             const f = it.fish && fishById[it.fish[0]];
             const got = it.fish && it.fish.every((id) => state.collected.has(id));
@@ -597,7 +1168,7 @@
                 <button class="btn add" data-add="${it.id}">${t("menu.order")}</button>
               </li>`;
           }).join("")}
-        </ul>`;
+        </ul>`}`;
     },
     mount: () => {
       $$(".tab", body).forEach((t) => t.addEventListener("click", () => {
@@ -606,6 +1177,32 @@
       }));
     },
   };
+
+  function setArt(st, c) {
+    if (st.pick === "daily3") return ART.nigiri(c.fish[0]);
+    if (c.fish.length) return ART.sashimi(c.fish[0], 2);
+    return `<span class="set-badge">${st.pick === "omakase" ? "任" : "定"}</span>`;
+  }
+  function setListHTML() {
+    return `
+      <p class="sub set-note">${t("sets.note")}</p>
+      <ul class="menu-list">
+        ${D.sets.map((st) => {
+          const c = setContents(st);
+          const random = st.pick === "omakase";
+          const today = st.pick === "fresh3" || st.pick === "daily3"
+            ? t("sets.today", { list: c.nigiri ? c.nigiri.map((id) => itemName(itemById[id])).join(t("chef.listSep")) : c.fish.map(fishName).join(t("chef.listSep")) })
+            : "";
+          return `
+            <li class="menu-item set-item">
+              <div class="dish">${setArt(st, c)}</div>
+              <div class="name"><b>${setName(st)}</b><span>${st.jp} · ${setDesc(st)}</span>${today ? `<span class="set-today">${today}</span>` : ""}</div>
+              <span class="price">${random ? t("sets.market") : `<s>${rmb(c.base)}</s> ${rmb(c.price)}`}</span>
+              <button class="btn add" data-set="${st.id}">${t("menu.order")}</button>
+            </li>`;
+        }).join("")}
+      </ul>`;
+  }
 
   // 师傅
   const chefPortrait = () => `
@@ -639,6 +1236,9 @@
       if (atCounter && Math.random() < 0.6) line = pick(chefLine("counterExtra"));
       let extra = "";
 
+      if (festival && Math.random() < 0.5) line = festText(festival, "line");
+      else if (rainy && Math.random() < 0.5) line = pick(chefLine("rainy"));
+      if (state.stamps >= STAMP_MAX) line = t("chef.cardFull");
       if (mode === "fresh") {
         line = t("chef.fresh", { list: todaysFresh.map(fishName).join(t("chef.listSep")) });
       }
@@ -668,6 +1268,7 @@
               <button class="btn primary" id="chef-omakase">${t("chef.btnOmakase")}</button>
               <button class="btn" data-open="fishcase">${t("chef.btnSelf")}</button>
               <button class="btn" id="chef-fresh">${t("chef.btnFresh")}</button>
+              <button class="btn" data-open="pointcard">${t("card.btn", { n: state.stamps, max: STAMP_MAX })}</button>
             </div>
           </div>
         </div>
@@ -809,6 +1410,14 @@
             </div>`).join("")}
         </div>
       </div>
+      <div class="opt-row bday-row">
+        <span>${t("bday.label")}</span>
+        <div>
+          <select id="bday-m" aria-label="${t("bday.month")}"><option value="">${t("bday.month")}</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${state.birthday && state.birthday.m === i + 1 ? "selected" : ""}>${t("bday.m", { n: i + 1 })}</option>`).join("")}</select>
+          <select id="bday-d" aria-label="${t("bday.day")}"><option value="">${t("bday.day")}</option>${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}" ${state.birthday && state.birthday.d === i + 1 ? "selected" : ""}>${t("bday.d", { n: i + 1 })}</option>`).join("")}</select>
+          <small>${t("bday.note")}</small>
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn primary" data-open="seats">${state.seat ? t("guest.changeSeat") : t("btn.goSeats")}</button>
         <button class="btn" id="guest-random">${t("guest.random")}</button>
@@ -818,6 +1427,16 @@
       $$(".opt", body).forEach((b) => b.addEventListener("click", () => {
         state.guest[b.dataset.k] = b.dataset.v; save();
       }));
+      const saveBday = () => {
+        const m = Number($("#bday-m", body).value), d = Number($("#bday-d", body).value);
+        // 不存在的日期（如 4 月 31 日）按无效处理
+        const valid = m && d && d <= [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+        state.birthday = valid ? { m, d } : null;
+        store.set("birthday", state.birthday);
+        if (valid) toast(isBirthday() && state.bdayYear !== new Date().getFullYear() ? t("bday.today") : t("bday.saved"));
+      };
+      $("#bday-m", body).addEventListener("change", saveBday);
+      $("#bday-d", body).addEventListener("change", saveBday);
       $("#guest-random", body).addEventListener("click", () => {
         Object.entries(D.guest).forEach(([k, opts]) => { state.guest[k] = pick(opts).id; });
         save();
@@ -881,12 +1500,15 @@
   };
 
   function submitOrder() {
+    if (isChef()) { toast(t("role.noOrder")); return; }
     const mode = state.orderMode;
     if (mode === "dine" && !state.seat) {
       toast(t("toast.pickSeat"));
       open("seats", "cart");
       return;
     }
+    // 上一单还没端上来时先不收新单，避免两单的盘子和小票互相顶掉
+    if (dishState.serving) { toast(t("toast.busy")); return; }
     const lines = state.cart;
     const eaten = [...new Set(lines.flatMap((l) => l.fish || []))];
     const fresh = eaten.filter((id) => !state.collected.has(id));
@@ -894,19 +1516,154 @@
     store.set("zukan", [...state.collected]);
     store.set("fresh", [...state.fresh]);
     state.cart = [];
+    state.visits += 1;
+    store.set("visits", state.visits);
+    // 积分卡：一单一个章，おまかせ套餐多一个；集满 10 个就不再加，等兑换
+    const before = state.stamps;
+    const bonus = Math.max(0, ...lines.filter((l) => l.kind === "set").map((l) => (setById[l.set].stamps || 1) - 1));
+    state.stamps = Math.min(STAMP_MAX, state.stamps + 1 + bonus);
+    store.set("stamps", state.stamps);
+    const stamped = { got: state.stamps - before, have: state.stamps };
+    state.receipts.unshift({ at: Date.now(), visit: state.visits, mode, seat: mode === "dine" ? state.seat : null, lines: JSON.parse(JSON.stringify(lines)), fresh, stamps: stamped.got });
+    state.receipts.length = Math.min(state.receipts.length, MAX_RECEIPTS);
+    store.set("receipts", state.receipts);
     updateHud();
-    // 先关掉订单，让客人看到上菜，再弹小票
+    // 先关掉订单，让客人看到上菜，再弹小票；上菜期间客人打开了别的弹窗就不打断，小票留在小票本里
     close();
     serveDish(lines, mode, () => {
-      open("receipt", lines, fresh, mode);
+      if (current) toast(t("toast.receiptSaved"));
+      else open("receipt", lines, fresh, mode, stamped);
       fresh.forEach((id, i) => setTimeout(() => toast(t("toast.newEntry", { name: fishName(fishById[id]) }), true), 400 + i * 500));
     });
   }
 
+  // ---------- 小票本（T-53） ----------
+  const MAX_RECEIPTS = 20;
+  const receiptTotal = (r) => r.lines.reduce((s, l) => s + l.price * l.qty, 0);
+  const receiptDate = (r) => new Date(r.at).toLocaleString(isEn() ? "en-US" : "zh-CN", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  function receiptText(r) {
+    const head = `${shopName()} · ${t("receipts.visit", { n: r.visit })} · ${receiptDate(r)}`;
+    const rows = r.lines.map((l) => `- ${lineName(l)} ×${l.qty}  ${rmb(l.price * l.qty)}`);
+    return [head, ...rows, `${t("cart.total")} ${rmb(receiptTotal(r))}`].join("\n");
+  }
+
+  views.receipts = {
+    cls: "book",
+    render: () => `
+      <h2>${t("receipts.title")}</h2>
+      <p class="sub">${t("receipts.sub", { max: MAX_RECEIPTS, n: state.visits })}</p>
+      ${state.receipts.length ? `<ul class="receipt-list">${state.receipts.map((r, i) => `
+        <li><button class="receipt-row" data-receipt="${i}">
+          <span class="stamp-mini">${r.mode === "takeout" ? "持" : "承"}</span>
+          <span><b>${t("receipts.visit", { n: r.visit })}</b><small>${receiptDate(r)} · ${t(r.mode === "takeout" ? "cart.takeout" : "cart.dine")} · ${t("receipts.items", { n: r.lines.length })}</small></span>
+          <span class="price">${rmb(receiptTotal(r))}</span>
+        </button></li>`).join("")}</ul>` : `<p>${t("receipts.empty")}</p>`}`,
+    mount: () => {
+      $$("[data-receipt]", body).forEach((b) => b.addEventListener("click", () => open("receiptDetail", Number(b.dataset.receipt))));
+    },
+  };
+
+  views.receiptDetail = {
+    cls: "book",
+    render: (i) => {
+      const r = state.receipts[i];
+      return `
+        <p class="sub receipt-meta">${t("receipts.visit", { n: r.visit })} · ${receiptDate(r)}</p>
+        ${views.receipt.render(r.lines, r.fresh, r.mode)}
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn" data-open="receipts">${t("receipts.back")}</button>
+          <button class="btn" id="receipt-copy">${t("receipts.copy")}</button>
+        </div>`;
+    },
+    mount: (i) => {
+      $("#receipt-copy", body).addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(receiptText(state.receipts[i])); toast(t("receipts.copied")); } catch { /* 没有剪贴板权限时静默 */ }
+      });
+    },
+  };
+
+
+  // ---------- 积分卡和抽奖（T-40） ----------
+  const STAMP_MAX = 10;
+  function drawPrize() {
+    const total = D.prizes.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total;
+    return D.prizes.find((p) => (r -= p.weight) < 0) || D.prizes[0];
+  }
+  const ticketHTML = (p, n = 0) => `
+    <div class="ticket" style="--tc:${p.color}">
+      <span class="ticket-jp">${p.jp}</span>
+      <b>${prizeText(p, "name")}</b>
+      ${n > 1 ? `<span class="ticket-n">×${n}</span>` : ""}
+    </div>`;
+
+  views.pointcard = {
+    cls: "book",
+    render: () => {
+      const n = state.stamps;
+      const owned = D.prizes.map((p) => [p, state.prizes.filter((w) => w.id === p.id).length]).filter(([, c]) => c);
+      return `
+        <h2>${t("card.title")} <small class="jp">ポイントカード</small></h2>
+        <p class="sub">${t("card.sub", { max: STAMP_MAX })}</p>
+        <div class="stamp-card" role="img" aria-label="${t("card.count", { n, max: STAMP_MAX })}">
+          ${Array.from({ length: STAMP_MAX }, (_, i) => `<span class="stamp-slot ${i < n ? "on" : ""}" style="--r:${(i * 37) % 24 - 12}deg">${i < n ? "舟" : i + 1}</span>`).join("")}
+        </div>
+        <p class="card-count">${t("card.count", { n, max: STAMP_MAX })}</p>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn primary" id="card-draw" ${n < STAMP_MAX ? "disabled" : ""}>${t("card.draw")}</button>
+        </div>
+        ${n < STAMP_MAX ? `<p class="card-hint">${t("card.left", { n: STAMP_MAX - n })}</p>` : ""}
+        <h3>${t("card.prizes")}</h3>
+        ${owned.length ? `<div class="ticket-row">${owned.map(([p, c]) => ticketHTML(p, c)).join("")}</div>` : `<p class="card-hint">${t("card.noPrize")}</p>`}
+        <p class="card-odds">${t("card.odds")}${D.prizes.map((p) => `${prizeText(p, "name")} ${p.weight}%`).join(" · ")}</p>`;
+    },
+    mount: () => {
+      const btn = $("#card-draw", body);
+      btn.addEventListener("click", () => {
+        if (state.stamps < STAMP_MAX) return;
+        // 先定结果再播动画，关掉弹窗也不会丢奖或重抽
+        const p = drawPrize();
+        state.stamps = 0;
+        state.prizes.push({ id: p.id, at: Date.now() });
+        store.set("stamps", 0);
+        store.set("prizes", state.prizes);
+        open("draw", p.id);
+        chefAct("act-bow");
+      });
+    },
+  };
+
+  views.draw = {
+    cls: "book",
+    render: (id) => {
+      const p = prizeById[id];
+      return `
+        <div class="draw">
+          <div class="draw-stage">
+            ${chefPortrait()}
+            <svg class="draw-box" viewBox="0 0 120 120" aria-hidden="true">
+              <rect x="14" y="30" width="92" height="80" rx="6" fill="#c8402e" stroke="#3a2418" stroke-width="5"/>
+              <rect x="40" y="22" width="40" height="12" rx="4" fill="#3a2418"/>
+              <circle cx="60" cy="70" r="20" fill="#f4e6d1" stroke="#3a2418" stroke-width="4"/>
+              <text x="60" y="78" text-anchor="middle" font-size="22" font-weight="700" fill="#3a2418">抽</text>
+            </svg>
+          </div>
+          <div class="bubble">${chefLine("drawIntro")}</div>
+          <div class="prize-reveal" role="status">
+            ${ticketHTML(p)}
+            <p><b>${t("draw.got", { name: prizeText(p, "name") })}</b> ${prizeText(p, "desc")}</p>
+            <div class="bubble">${prizeText(p, "line")}</div>
+            <div class="btn-row" style="justify-content:center">
+              <button class="btn primary" data-open="pointcard">${t("draw.back")}</button>
+            </div>
+          </div>
+        </div>`;
+    },
+  };
 
   views.receipt = {
     cls: "book",
-    render: (lines, fresh, mode = "dine") => {
+    render: (lines, fresh, mode = "dine", stamped = null) => {
       const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
       // 这次点到的鱼：堂食摆在木屐盘上，打包装进外带盒
       const served = [...new Set(lines.flatMap((l) => l.fish || []))].map((id) => fishById[id]);
@@ -922,9 +1679,12 @@
             <p>${t("receipt.new", { n: fresh.length })}</p>
             <div class="unlock-row">${fresh.map((id) => cardHTML(fishById[id], true)).join("")}</div>`
           : `<p>${t("receipt.none")}</p>`}
+          ${stamped ? `<p class="stamp-note">${stamped.got ? t("card.gotStamp", { n: stamped.got, have: stamped.have, max: STAMP_MAX }) : t("card.fullNoStamp")}${stamped.have >= STAMP_MAX ? " " + t("card.goDraw") : ""}</p>` : ""}
           <div class="btn-row" style="justify-content:center">
             <button class="btn primary" data-open="zukan">${t("receipt.zukan")}</button>
             <button class="btn" data-open="chef">${t("receipt.again")}</button>
+            <button class="btn" data-open="receipts">${t("receipt.book")}</button>
+            ${stamped ? `<button class="btn" data-open="pointcard">${t("card.title")}</button>` : ""}
           </div>
         </div>`;
     },
@@ -1066,7 +1826,9 @@
     });
     el.addEventListener("blur", () => { tip.hidden = true; });
     // 盘子不开弹窗，点一下吃一贯
-    const activate = () => { tip.hidden = true; if (id === "dish") eatDish(); else open(id); };
+    // 当厨师时：点春田或客人看订单，点鱼柜去摆盘
+    const route = () => (isChef() && { chef: "chefOrder", guest: "chefOrder", fishcase: "plating" }[id]) || id;
+    const activate = () => { tip.hidden = true; if (id === "dish") { if (!isChef()) eatDish(); } else open(route()); };
     el.addEventListener("click", activate);
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); }
@@ -1075,6 +1837,7 @@
 
   function hotspotInfo(id) {
     if (id === "dish" && dishState.mode === "takeout") id = "dishTakeout";
+    if (id === "guest" && isChef()) id = "npc";
     const zh = D.hotspots[id];
     return { title: tx("hotspots", id, "title", zh.title), hint: tx("hotspots", id, "hint", zh.hint) };
   }
@@ -1107,6 +1870,7 @@
   const syncHudHeight = () => document.documentElement.style.setProperty("--hud-h", $(".hud").offsetHeight + "px");
   window.addEventListener("resize", syncHudHeight);
 
+  if (isChef()) newCustomer();
   $("#chef-figure").innerHTML = `<g class="chef-act"><g transform="translate(628 450)">${chefSVG()}</g></g>`;
   applyLang();
   syncHudHeight();
@@ -1116,4 +1880,15 @@
     chefAct("act-bow", 1000);
     if (state.seat) guestAct("act-wave", 1000);
   }, 500);
+  setTimeout(maybeBirthday, 1800);
+  renderAtmosphere();
+  if (festival) setTimeout(() => toast(t("fest.toast", { name: festText(festival, "name") }), true), 1200);
+  if (rainy) setTimeout(() => toast(t("rain.toast")), festival ? 2000 : 1200);
+
+  $("#hud-photo").addEventListener("click", takePhoto);
+
+  // 离线可用（T-59）：只在 http(s) 下注册，file:// 打开时浏览器不支持
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* 注册失败时照常在线使用 */ }));
+  }
 })();

@@ -77,6 +77,8 @@ window.SHOP_DATA = {
         { id: "r-tekka", name: "铁火卷", jp: "鉄火巻", price: 48, fish: ["akami"], desc: "金枪鱼细卷" },
       ],
     },
+    // 定食分类根据下面的 sets 自动生成，不用手写
+    { id: "sets", name: "定食", jp: "セット", fromSets: true },
     {
       id: "hot", name: "一品料理", jp: "一品",
       items: [
@@ -86,6 +88,7 @@ window.SHOP_DATA = {
         { id: "agedashi", name: "扬出豆腐", jp: "揚げ出し豆腐", price: 42, desc: "高汤炸豆腐" },
         { id: "edamame", name: "盐水毛豆", jp: "枝豆", price: 28, desc: "" },
         { id: "misoshiru", name: "味噌汤", jp: "味噌汁", price: 20, desc: "今日：蚬贝" },
+        { id: "gohan", name: "米饭", jp: "ご飯", price: 10, desc: "新米" },
       ],
     },
     {
@@ -106,6 +109,17 @@ window.SHOP_DATA = {
         { id: "hojicha", name: "焙茶", jp: "ほうじ茶", price: 0, desc: "免费续杯", bottle: "#8a5a32" },
       ],
     },
+  ],
+
+  // 定食 / セット（T-26，PRD Q9）。价格 = 组成部分单点合计 × 0.85，四舍五入到元，在 app.js 里算。
+  // pick 是鱼的选法：fresh3 = 今日鲜货前 3 种刺身；daily3 = 按日期固定选 3 款握寿司（共 6 贯）；
+  // omakase = 点的时候师傅随机挑 3 种（可能出隐藏鱼）。parts 是 menu 里的菜品 id。
+  // stamps 是这份套餐让积分卡多盖的章数（默认一单一个章）。
+  sets: [
+    { id: "set-sashimi", name: "刺身定食", jp: "刺身定食", pick: "fresh3", parts: ["gohan", "misoshiru", "edamame"], desc: "今日鲜货 3 种刺身 + 米饭 + 味噌汤 + 小菜" },
+    { id: "set-nigiri", name: "握寿司定食", jp: "握り定食", pick: "daily3", parts: ["misoshiru", "chawanmushi"], desc: "师傅今日选 6 贯 + 味噌汤 + 茶碗蒸" },
+    { id: "set-tempura", name: "天妇罗定食", jp: "天ぷら定食", parts: ["tempura", "gohan", "misoshiru", "matcha-ice"], desc: "不吃生鱼也能吃饱：天妇罗 + 米饭 + 味噌汤 + 甜品" },
+    { id: "set-omakase", name: "おまかせ套餐", jp: "おまかせセット", pick: "omakase", parts: ["misoshiru", "warabi", "hojicha"], stamps: 2, desc: "师傅挑 3 种鱼（可能出隐藏鱼）+ 味噌汤 + 甜品 + 茶，积分卡盖 2 个章" },
   ],
 
   seats: [
@@ -154,6 +168,7 @@ window.SHOP_DATA = {
     drinks: { title: "酒架 · お飲み物", hint: "清酒、梅酒和茶" },
     chef: { title: "春田师傅 · 板前", hint: "和师傅聊聊，或请他推荐" },
     guest: { title: "你 · お客さん", hint: "换个发型或衣服" },
+    npc: { title: "客人 · お客様", hint: "看看客人点了什么" },
     fishcase: { title: "鱼柜 · ネタケース", hint: "自选鱼生，亲手拼一盘" },
     seats: { title: "座位 · お席", hint: "选择你的座位" },
     tablemenu: { title: "桌面菜单 · メニュー", hint: "翻开完整菜单点菜" },
@@ -185,8 +200,43 @@ window.SHOP_DATA = {
     omakaseIntro: "好，那就交给我吧。",
     legendary: "……今天运气不错，这条鱼可不常见。",
     afterOrder: ["はい、お待ち！", "请慢用～", "这盘我很满意，你尝尝。"],
+    rainy: ["外面下雨了吧？先喝口热焙茶暖暖。", "下雨天最适合热的：味噌汤、茶碗蒸、扬出豆腐。", "雨伞放门口就好，我帮你看着。"],
+    drawIntro: "集满了啊，谢谢常来！来，摇一摇抽奖箱。",
     cleared: ["ごちそうさま！盘子我收走啦。", "吃得真干净，下次再来～", "满意的话，记得再来哦。"],
   },
+
+  // 节日装饰（T-55）：按真实日期（MM-DD，含首尾）自动出现，可用 ?date=2026-07-07 预览。
+  // deco 是 art.js 里的装饰；petals 是满屏飘樱花。line 是春田那几天会说的话。
+  festivals: [
+    { id: "shogatsu", name: "正月", from: "01-01", to: "01-07", deco: "kadomatsu", line: "新年好！今年也请多关照。门口的门松是我自己扎的。" },
+    { id: "sakura", name: "赏樱", from: "03-25", to: "04-10", deco: "petals", line: "樱花开了。今天的真鲷正当季，配樱花盐很好吃。" },
+    { id: "tanabata", name: "七夕", from: "07-01", to: "07-07", deco: "tanabata", line: "七夕快到了，要不要在竹子上挂个愿望？" },
+    { id: "halloween", name: "万圣节", from: "10-25", to: "10-31", deco: "pumpkin", line: "南瓜灯是隔壁小朋友帮忙刻的。不给糖就捣蛋？给你一块蕨饼吧。" },
+    { id: "christmas", name: "圣诞", from: "12-18", to: "12-25", deco: "tree", line: "圣诞快乐！今天的寿司也算是一种礼物吧。" },
+  ],
+
+  // 下雨天（T-56）：按日期固定随机，平时约 18% 的日子下雨，6 月梅雨季约 40%；可用 ?weather=rain / clear 预览。
+  rain: { chance: 0.18, juneChance: 0.4 },
+
+  // 当厨师（T-10 ~ T-12，PRD Q1 / Q2）：NPC 客人点刺身拼盘，玩家切鱼、摆盘、上菜，按订单给 1–3 星。
+  // 3 星多盖一个积分章；端出去的鱼照常收进图鉴。
+  chefMode: {
+    maxSlices: 12,
+    orderIntro: ["您好，我想要一份刺身拼盘：", "麻烦师傅，给我来这样一盘：", "今天想吃这些，拜托了！"],
+    reactions: {
+      3: ["完全就是我想要的！摆得也好看～", "おいしい！师傅手艺真好。", "一片不差，太专业了！"],
+      2: ["嗯，差不多是我点的，谢谢！", "好吃！就是好像和我点的有一点不一样。"],
+      1: ["咦，这好像不是我点的……不过也挺好吃的。", "师傅是不是看错单子了？"],
+    },
+  },
+
+  // 积分卡（T-40，PRD Q11）：每单盖一个章，集满 10 个找春田抽一次奖。weight 是概率（%），Jacey 可改。
+  prizes: [
+    { id: "coupon", name: "消费券", jp: "割引券", weight: 50, color: "#e9b73a", desc: "下次来店用的消费券。", line: "消费券一张，下次来记得带上。" },
+    { id: "neko", name: "撸猫券", jp: "ねこなで券", weight: 30, color: "#f0a8b8", desc: "可以摸摸店里的猫。", line: "撸猫券！小舟家的猫很亲人的。" },
+    { id: "plush", name: "玩偶公仔", jp: "ぬいぐるみ", weight: 15, color: "#8fb8d8", desc: "春田师傅的小公仔。", line: "这个公仔是照着我做的，像不像？" },
+    { id: "feast", name: "免费吃一顿", jp: "ご招待券", weight: 5, color: "#c8402e", desc: "请你免费吃一顿。", line: "哇，大奖！下次这顿我请。" },
+  ],
 
   omikuji: [
     { result: "大吉", text: "今日鱼运极佳！师傅推荐里出现传说之鱼的概率大幅提升。", luck: 3 },

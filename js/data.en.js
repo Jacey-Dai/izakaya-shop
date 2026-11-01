@@ -34,7 +34,7 @@ window.SHOP_DATA_EN = {
   },
 
   categories: {
-    sashimi: "Sashimi", sushi: "Nigiri", hot: "Small dishes", sweet: "Sweets", drinks: "Drinks",
+    sashimi: "Sashimi", sushi: "Nigiri", sets: "Set meals", hot: "Small dishes", sweet: "Sweets", drinks: "Drinks",
   },
 
   menu: {
@@ -53,6 +53,7 @@ window.SHOP_DATA_EN = {
     agedashi: { name: "Agedashi tofu", desc: "Fried tofu in dashi" },
     edamame: { name: "Edamame", desc: "" },
     misoshiru: { name: "Miso soup", desc: "Today: clams" },
+    gohan: { name: "Rice", desc: "New-crop rice" },
     "matcha-ice": { name: "Matcha ice cream", desc: "" },
     warabi: { name: "Warabi mochi", desc: "Kinako + black sugar syrup" },
     sake: { name: "Junmai ginjo sake", desc: "1 gō, chilled" },
@@ -61,6 +62,37 @@ window.SHOP_DATA_EN = {
     matcha: { name: "Matcha", desc: "With a wagashi sweet" },
     yuzu: { name: "Yuzu soda", desc: "Non-alcoholic" },
     hojicha: { name: "Hojicha", desc: "Free refills" },
+  },
+
+  sets: {
+    "set-sashimi": { name: "Sashimi set", desc: "3 of today's fresh fish + rice + miso soup + a small side" },
+    "set-nigiri": { name: "Nigiri set", desc: "6 pieces of the chef's choice today + miso soup + chawanmushi" },
+    "set-tempura": { name: "Tempura set", desc: "A full meal with no raw fish: tempura + rice + miso soup + dessert" },
+    "set-omakase": { name: "Omakase set", desc: "3 fish picked by the chef (maybe a hidden one) + miso soup + dessert + tea. Worth 2 stamps" },
+  },
+
+  festivals: {
+    shogatsu: { name: "New Year", line: "Happy New Year! Please look after me this year too. I tied the kadomatsu by the door myself." },
+    sakura: { name: "Cherry blossoms", line: "The cherry trees are in bloom. Sea bream is in season, lovely with sakura salt." },
+    tanabata: { name: "Tanabata", line: "Tanabata is coming. Want to hang a wish on the bamboo?" },
+    halloween: { name: "Halloween", line: "The kids next door helped carve the pumpkin. Trick or treat? Have some warabi mochi." },
+    christmas: { name: "Christmas", line: "Merry Christmas! Sushi counts as a present, right?" },
+  },
+
+  chefMode: {
+    orderIntro: ["Hello! I'd like a sashimi plate with:", "Chef, could I have a plate like this:", "I'm in the mood for these today, please!"],
+    reactions: {
+      3: ["Exactly what I wanted! And so pretty.", "Oishii! You're a real chef.", "Every slice is right. So professional!"],
+      2: ["That's about what I ordered, thanks!", "Tasty! Though it's a little different from my order."],
+      1: ["Hm, this isn't quite what I ordered… still tasty though.", "Did you read my ticket wrong, chef?"],
+    },
+  },
+
+  prizes: {
+    coupon: { name: "Coupon", desc: "A coupon for your next visit.", line: "A coupon! Bring it next time." },
+    neko: { name: "Cat-petting pass", desc: "You get to pet the shop cat.", line: "A cat-petting pass! Our cat loves people." },
+    plush: { name: "Plush doll", desc: "A little plush of Chef Haruta.", line: "This plush is modelled on me. Look alike?" },
+    feast: { name: "Free meal", desc: "Your next meal is on the house.", line: "The big prize! Your next meal is on me." },
   },
 
   seats: {
@@ -85,6 +117,7 @@ window.SHOP_DATA_EN = {
     drinks: { title: "Sake shelf", hint: "Sake, plum wine and tea" },
     chef: { title: "Chef Haruta", hint: "Chat, or ask for his recommendation" },
     guest: { title: "You", hint: "Change your hair or outfit" },
+    npc: { title: "Customer", hint: "See what the customer ordered" },
     fishcase: { title: "Fish case", hint: "Pick fish and build your own plate" },
     seats: { title: "Seats", hint: "Choose where to sit" },
     tablemenu: { title: "Table menu", hint: "Open the full menu" },
@@ -109,6 +142,8 @@ window.SHOP_DATA_EN = {
     omakaseIntro: "Alright, leave it to me.",
     legendary: " …You're lucky today. You don't see this fish often.",
     afterOrder: ["Hai, omachi!", "Enjoy!", "I'm proud of this plate. Give it a try."],
+    rainy: ["Raining out there? Have some hot hojicha first.", "Rainy days call for something warm: miso soup, chawanmushi, agedashi tofu.", "Leave your umbrella by the door, I'll keep an eye on it."],
+    drawIntro: "A full card! Thanks for coming so often. Here, give the box a shake.",
     cleared: ["Gochisōsama! I'll take the plate.", "Clean plate! Come again soon.", "Glad you liked it. See you next time."],
   },
 
