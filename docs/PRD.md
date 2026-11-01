@@ -482,6 +482,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | T-60 | 修复体检缺陷：连下两单丢小票（上菜中再结账会提示稍等）、上菜时打开的弹窗不再被小票顶掉、加菜时客人不再重画、桌面菜单与招财猫点击区加大、上菜和吃的读屏播报、分享封面图 `assets/og-cover.jpg` 与 favicon | 完成（@Claude/feat/T-60-T-53-receipts） | — | `app.js`、`index.html` | 见体检报告缺陷表 |
 | T-61 | 手写风格小票（从 T-26 拆出）：毛笔字、竖排店名、印章、日期、座位，套餐单独一栏 | 待做 | T-26 | `views/receipt`、`css` | 中英文都能看；可截图保存（配 T-54） |
 | T-62 | 已确认设计稿落地：寿司、店猫、客人和分层精细动作统一为微缩手作风 | 已实现并验证，待 PR 合并（@Codex/feat/T-62-miniature-art） | Jacey 已确认概念稿并授权推送 | art.js、app.js、assets/art、css、tests | 保留鱼种、角色换装和新增玩法；店猫可交互；手部道具动作；减少动态效果；离线素材齐全 |
+| T-63 | 修复客人拼接坐姿和断臂动作，统一万圣节与雨景材质 | 进行中（@Codex/fix/T-63-guest-weather） | Jacey 反馈 | assets/art、app.js、art.js、css、tests | 完整坐姿无拼腿；打招呼不突然增加手臂；南瓜与雨景贴合微缩材质；保留双语和离线 |
 
 ### 想法池（未评估）
 - 不做（Jacey 2026-10-31）：女将 / 店员 NPC、吃法小课堂、寿司小测验
