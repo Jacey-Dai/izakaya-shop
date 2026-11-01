@@ -30,7 +30,7 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     // Local asset decoding under file://, including actual transparency on the chef.
     assert.equal(await page.evaluate(async () => {
-      for (const src of ['assets/art/izakaya-room.webp', 'assets/art/haruta.webp', 'assets/art/tatami-room.webp', 'assets/art/guest-dolls.webp', 'assets/art/guest-accessories.webp', ...Array.from({length:6},(_,i)=>'assets/art/cat-'+i+'.webp'), ...Array.from({length:3},(_,i)=>'assets/art/chef-'+i+'.webp'), ...Array.from({length:12},(_,i)=>'assets/art/food-'+i+'.webp')]) { const im = new Image(); im.src = src; await im.decode(); if (!im.naturalWidth) return false; }
+      for (const src of ['assets/art/izakaya-room.webp', 'assets/art/haruta.webp', 'assets/art/tatami-room.webp', 'assets/art/guest-dolls.webp', 'assets/art/guest-accessories.webp', ...['guest-stool','pumpkin','umbrella','rain-counter','rain-tatami'].map(x=>'assets/art/'+x+'.webp'), ...Array.from({length:6},(_,i)=>'assets/art/cat-'+i+'.webp'), ...Array.from({length:3},(_,i)=>'assets/art/chef-'+i+'.webp'), ...Array.from({length:12},(_,i)=>'assets/art/food-'+i+'.webp')]) { const im = new Image(); im.src = src; await im.decode(); if (!im.naturalWidth) return false; }
       return true;
     }), true);
     // Deployment regression: a returning browser must request versioned CSS/JS.
@@ -68,9 +68,9 @@ const root = path.resolve(__dirname, '..');
     // Dine-in: choose seat, add menu item, customize guest, build plate, omakase, checkout.
     await page.locator('#hud-seat').click(); await page.locator('[data-seat="counter"]').click();
     assert.equal(await page.locator('#guest').isVisible(), true);
-    assert.equal(await page.locator('#guest .guest-doll-art').getAttribute('height'),'190');
+    assert.equal(await page.locator('#guest .guest-doll-art').getAttribute('height'),'260');
     // Counter stools: legs hang down instead of the tatami cross-legged pose.
-    assert.equal(await page.locator('#guest .guest-doll').getAttribute('data-pose'),'stool'); assert.equal(await page.locator('#guest .guest-legs').count(),1);
+    assert.equal(await page.locator('#guest .guest-doll').getAttribute('data-pose'),'stool'); assert.equal(await page.locator('#guest .guest-legs').count(),0);
     await page.locator('#guest').focus();await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
     const visualHash = async () => createHash('sha256').update(await page.locator('.guest-preview').screenshot()).digest('hex');

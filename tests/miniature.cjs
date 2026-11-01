@@ -27,7 +27,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.locator('.chef-rest').evaluate(e=>getComputedStyle(e).display),'none');
     await page.screenshot({path:'/tmp/miniature-slice.png',fullPage:true});
     await page.evaluate(()=>{document.querySelector('.chef-act').setAttribute('class','chef-act');document.querySelector('#guest .guest-doll').classList.add('act-chomp')});
-    assert.equal(await page.locator('#guest .guest-forearm').evaluate(e=>getComputedStyle(e).display),'inline');
+    assert.equal(await page.locator('#guest .guest-forearm, #guest .guest-legs').count(),0);
     await page.screenshot({path:'/tmp/miniature-eating.png',fullPage:true});
     await page.evaluate(()=>{document.querySelector('#modal-body').innerHTML='<div style="display:flex;flex-wrap:wrap;gap:20px;padding:24px">'+SHOP_DATA.fish.map(f=>'<div style="width:120px">'+KOBUNE_ART.nigiri(f)+'<p>'+f.en+'</p>'+KOBUNE_ART.sashimi(f)+'</div>').join('')+'</div>';document.querySelector('#overlay').hidden=false});
     // Food geometry must fit its viewport, so group clicks and keyboard focus use the visible dish.
@@ -35,7 +35,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('#modal').screenshot({path:'/tmp/miniature-food.png'});
     await page.keyboard.press('Escape');
     await page.emulateMedia({reducedMotion:'reduce'});
-    assert.equal(await page.locator('#guest .guest-forearm').evaluate(e=>getComputedStyle(e).display),'none');
+    assert.equal(await page.locator('#guest .guest-doll').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.equal(await page.locator('.chef-idle').evaluate(e=>getComputedStyle(e).animationName),'none');
     assert.deepEqual(errors,[]);
     console.log('PASS: physical cat clicks in both rooms, keyboard and bilingual feedback, action layers, bounded food geometry, reduced motion and screenshots.');

@@ -160,14 +160,7 @@ window.KOBUNE_ART = (() => {
       <path d="M40 -240 l4 9 l10 1 l-8 6 l3 10 l-9 -6 l-9 6 l3 -10 l-8 -6 l10 -1 Z" fill="#f6d55c" ${OL()}/>`;
     },
     // 万圣节：笑脸南瓜灯
-    pumpkin: () => `
-      <ellipse cx="0" cy="-26" rx="38" ry="27" fill="#e8892e" ${OL()}/>
-      <path d="M-12 -52 Q0 -46 12 -52 M-14 -2 Q0 -6 14 -2" stroke="#b5601c" stroke-width="2.5" fill="none"/>
-      <path d="M-14 -52 Q-18 -26 -14 -1 M14 -52 Q18 -26 14 -1" stroke="#c96d22" stroke-width="2.5" fill="none"/>
-      <path d="M-3 -52 q-2 -12 8 -16" stroke="#5d7a35" stroke-width="5" stroke-linecap="round" fill="none"/>
-      <path d="M-22 -34 l8 -9 l8 9 Z M6 -34 l8 -9 l8 9 Z" fill="#ffd96a" stroke="#7a3f12" stroke-width="1.5"/>
-      <path d="M-18 -20 Q0 -6 18 -20 Q0 -12 -18 -20 Z" fill="#ffd96a" stroke="#7a3f12" stroke-width="1.5"/>
-      <ellipse class="deco-glow" cx="0" cy="-26" rx="54" ry="40" fill="url(#lamp-light)"/>`,
+    pumpkin: () => `<ellipse cx="0" cy="-1" rx="33" ry="5" fill="#6b381c" opacity=".22"/><image href="assets/art/pumpkin.webp" x="-37" y="-78" width="74" height="78" preserveAspectRatio="xMidYMax meet"/>`,
     // 圣诞：小盆栽圣诞树
     tree: () => `
       <path d="M-14 0 L-18 -20 L18 -20 L14 0 Z" fill="#b5653a" ${OL()}/>
@@ -176,13 +169,7 @@ window.KOBUNE_ART = (() => {
       ${[[-16, -30, "#e86a5c"], [12, -36, "#6a9bd8"], [-6, -58, "#f6d55c"], [10, -64, "#e86a5c"], [0, -84, "#f0a8b8"], [22, -26, "#f6d55c"]].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}" ${OL()}/>`).join("")}
       <path d="M0 -114 l4 9 l10 1 l-8 6 l3 10 l-9 -6 l-9 6 l3 -10 l-8 -6 l10 -1 Z" fill="#f6d55c" ${OL()}/>`,
     // 下雨天（T-56）：靠在门口的湿雨伞
-    umbrella: () => `
-      <path d="M0 0 L-2 -12" stroke="${T.ol}" stroke-width="3" stroke-linecap="round"/>
-      <path d="M-2 -12 Q-14 -60 -10 -118 L6 -118 Q12 -60 -2 -12 Z" fill="#41557e" ${OL()}/>
-      <path d="M-6 -20 Q-10 -70 -6 -116 M2 -24 Q4 -70 2 -116" stroke="#2f3f60" stroke-width="1.5" fill="none"/>
-      <rect x="-9" y="-62" width="14" height="5" rx="2" fill="#c0392b"/>
-      <path d="M-2 -118 L-2 -150 Q-2 -160 8 -160 Q16 -160 16 -152" stroke="#8a5a32" stroke-width="4" stroke-linecap="round" fill="none"/>
-      <ellipse cx="2" cy="2" rx="18" ry="4" fill="#7fa6c8" opacity=".45"/>`,
+    umbrella: () => `<ellipse cx="0" cy="0" rx="18" ry="4" fill="#493c35" opacity=".18"/><image href="assets/art/umbrella.webp" x="-25" y="-150" width="65" height="150" preserveAspectRatio="xMidYMax meet"/>`,
   };
   const deco = (kind) => (DECO[kind] ? DECO[kind]() : "");
 

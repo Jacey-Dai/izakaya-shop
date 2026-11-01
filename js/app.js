@@ -172,18 +172,19 @@
     const wear = opt("clothing").id;
     const col = ["short", "bun", "ponytail", "long"].indexOf(style);
     const row = ["casual", "kimono", "yukata"].indexOf(wear);
-    // 透明像素边界，单位为图集中每格的局部坐标；不裁切原始素材文件。
+    const onStool = seat === "counter";
+    // 高凳使用完整连体坐姿，座敷保留原盘腿素材。
     const frames = [
       [[88, 13, 242, 323], [80, 18, 239, 318], [70, 17, 242, 319], [72, 19, 238, 317]],
       [[54, 11, 306, 325], [50, 13, 300, 323], [39, 13, 304, 323], [40, 14, 297, 323]],
       [[90, 6, 235, 320], [83, 9, 235, 317], [74, 9, 237, 317], [76, 12, 231, 314]],
     ];
-    const [x, y, w, h] = frames[row][col];
+    const [x, y, w, h] = onStool ? [20, 6, 344, 500] : frames[row][col];
     const id = "guest-doll-" + guestArtId++;
     const height = seat === "counter" ? 190 : 220;
-    const headEnd = [178, 172, 166][row];
-    const tailEnd = [233, 224, 219][row];
-    const longEnd = [208, 202, 199][row];
+    const headEnd = onStool ? 192 : [178, 172, 166][row];
+    const tailEnd = onStool ? 258 : [233, 224, 219][row];
+    const longEnd = onStool ? 234 : [208, 202, 199][row];
     const hairRegion = (fill) => {
       let shape = `<rect width="384" height="${headEnd}" fill="${fill}"/>`;
       if (style === "ponytail") shape += `<path d="M158 ${headEnd - 25} Q163 ${tailEnd - 15} 193 ${tailEnd} Q228 ${tailEnd + 5} 238 ${tailEnd - 25} L234 ${headEnd - 25} Z" fill="${fill}"/>`;
@@ -203,40 +204,30 @@
       long: { width: 160, height: 111, lift: 22, cx: 0 },
     };
     const hat = hatFits[style];
-    // 吧台是高凳：裁掉盘腿的膝盖（图集局部坐标），把衣摆放在凳面上，小腿垂在凳腿之间。
-    // 座敷和换装预览保持原来的盘腿坐。
-    const onStool = seat === "counter";
-    const seatClip = {
-      casual: "M0 0 H384 V258 H290 L283 282 Q277 299 262 304 Q192 313 122 304 Q108 299 102 282 L95 258 H0 Z",
-      kimono: "M0 0 H384 V284 Q378 300 350 301 Q192 306 34 301 Q6 300 0 284 Z",
-      yukata: "M0 0 H384 V266 H306 L304 295 Q301 311 280 312 Q208 316 136 312 Q115 311 113 295 L111 266 H0 Z",
-    }[wear];
-    const seatLine = { casual: 309, kimono: 302, yukata: 313 }[wear];
-    const lift = onStool ? -height + (seatLine - (y - 3)) * height / (h + 6) : 0;
+    const lift = 0;
     const brimY = -height - hat.lift + hat.height * .73;
     let extra = "";
     if (accessory === "hat") extra = `<svg class="guest-accessory guest-hat" data-fit="${style}" x="${hat.cx - hat.width / 2}" y="${-height - hat.lift}" width="${hat.width}" height="${hat.height}" viewBox="43 153 881 614" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
     if (accessory === "kanzashi") extra = `<svg class="guest-accessory" x="16" y="${-height + 30}" width="58" height="48" viewBox="1020 178 713 584" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
     return `<g class="guest-doll" data-pose="${onStool ? "stool" : "floor"}" data-hair="${style}" data-clothing="${wear}" data-outfit="${opt("outfit").id}" data-hair-color="${opt("hairColor").id}" data-accessory="${accessory}">
-      ${onStool ? stoolLegs(wear, opt("outfit").color, id) : `<ellipse cx="0" cy="-2" rx="${wear === "kimono" ? 76 : 58}" ry="7" fill="#36281d" opacity=".22"/>`}
+      ${onStool ? `<ellipse cx="0" cy="-2" rx="43" ry="5" fill="#36281d" opacity=".18"/>` : `<ellipse cx="0" cy="-2" rx="${wear === "kimono" ? 76 : 58}" ry="7" fill="#36281d" opacity=".22"/>`}
       <g transform="translate(0 ${-lift})">
-      ${accessory === "hat" ? `<defs><clipPath id="${id}-hat-clearance" clipPathUnits="userSpaceOnUse"><path d="M-125 ${brimY} Q${hat.cx} ${brimY + hat.height * .28} 125 ${brimY} V20 H-125 Z"/></clipPath></defs>` : ""}
+      ${accessory === "hat" ? `<defs><clipPath id="${id}-hat-clearance" clipPathUnits="userSpaceOnUse"><path d="M-125 ${brimY} Q${hat.cx} ${brimY + hat.height * .28} 125 ${brimY} V${onStool ? 100 : 20} H-125 Z"/></clipPath></defs>` : ""}
       <g class="guest-hat-clearance" ${accessory === "hat" ? `clip-path="url(#${id}-hat-clearance)"` : ""}>
-      <svg class="guest-doll-art" x="-110" y="${-height}" width="220" height="${height}" viewBox="${x - 5} ${y - 3} ${w + 10} ${h + 6}" overflow="hidden">
+      <svg class="guest-doll-art" x="-110" y="${-height}" width="220" height="${onStool ? 260 : height}" viewBox="${x - 5} ${y - 3} ${w + 10} ${h + 6}" overflow="hidden">
         <defs>
-          <image id="${id}-sprite" href="assets/art/guest-dolls.webp" x="${-col * 384}" y="${-row * 1024 / 3}" width="1536" height="1024"/>
-          <filter id="${id}-neutral" filterUnits="userSpaceOnUse" x="0" y="0" width="384" height="342" color-interpolation-filters="sRGB">
+          <image id="${id}-sprite" href="assets/art/${onStool ? "guest-stool" : "guest-dolls"}.webp" x="${-col * 384}" y="${-row * (onStool ? 512 : 1024 / 3)}" width="1536" height="${onStool ? 1536 : 1024}"/>
+          <filter id="${id}-neutral" filterUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}" color-interpolation-filters="sRGB">
             <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -4 0 4 0 1" result="neutral"/>
             <feComposite in="neutral" in2="SourceGraphic" operator="in"/>
           </filter>
           <filter id="${id}-hair" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${tint(opt("hairColor").color)}"/></filter>
           <filter id="${id}-cloth" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${tint(opt("outfit").color)}"/></filter>
-          <mask id="${id}-neutral-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342"><use href="#${id}-sprite" filter="url(#${id}-neutral)"/></mask>
-          <mask id="${id}-hair-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342">${hairRegion("white")}</mask>
-          <mask id="${id}-cloth-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="342"><rect width="384" height="${wear === "casual" ? 316 : 342}" fill="white"/>${hairRegion("black")}</mask>
-          ${onStool ? `<clipPath id="${id}-seat" clipPathUnits="userSpaceOnUse"><path d="${seatClip}"/></clipPath>` : ""}
+          <mask id="${id}-neutral-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}"><use href="#${id}-sprite" filter="url(#${id}-neutral)"/></mask>
+          <mask id="${id}-hair-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}">${hairRegion("white")}</mask>
+          <mask id="${id}-cloth-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}"><rect width="384" height="${onStool ? 512 : wear === "casual" ? 316 : 342}" fill="white"/>${hairRegion("black")}</mask>
         </defs>
-        <g ${onStool ? `clip-path="url(#${id}-seat)"` : ""}>
+        <g>
         <use href="#${id}-sprite"/>
         <g mask="url(#${id}-neutral-mask)">
           <g mask="url(#${id}-cloth-mask)"><use href="#${id}-sprite" filter="url(#${id}-cloth)"/></g>
@@ -246,38 +237,8 @@
       </svg>
       </g>
       ${extra}
-      <g class="guest-forearm-anchor" transform="translate(49 ${-height * .48})"><g class="guest-forearm" aria-hidden="true">
-        <defs><linearGradient id="${id}-sleeve"><stop stop-color="${opt("outfit").color}"/><stop offset=".45" stop-color="${opt("outfit").color}"/><stop offset="1" stop-color="#594238"/></linearGradient><radialGradient id="${id}-palm" cx=".3" cy=".25"><stop stop-color="#f9d5aa"/><stop offset="1" stop-color="#d9a171"/></radialGradient></defs>
-        <path d="M-10 4 Q-18 -14 -13 -30 Q-4 -38 9 -29 L13 -4 Q11 12 -10 4" fill="url(#${id}-sleeve)" filter="url(#kb-grain)"/>
-        ${[-24, -16, -8].map((y) => [-8, -1, 6].map((x) => `<path d="M${x} ${y} l2 3 l2 -3" fill="none" stroke="#fff6df" stroke-opacity=".18" stroke-width=".8"/>`).join("")).join("")}
-        <path d="M-10 -29 Q-11 -43 -4 -46 Q4 -51 10 -41 L11 -29 Q0 -24 -10 -29" fill="url(#${id}-palm)"/>
-        <path d="M-7 -31 Q1 -28 10 -31 M-9 -17 Q0 -13 11 -17" fill="none" stroke="#fff8e8" stroke-opacity=".25" stroke-width="1.5"/>
-        <g class="guest-chopsticks" stroke-linecap="round"><path d="M3 -41 L-29 -66 M7 -38 L-29 -61" stroke="#704326" stroke-width="2.5"/><path d="M3 -42 L-27 -65" stroke="#d9ae76" stroke-width=".8"/></g>
-      </g></g>
       <path class="guest-hit" d="M0 ${-height - 5} C-86 ${-height - 5} -86 ${-height + 115} 0 ${-height + 115} C86 ${-height + 115} 86 ${-height - 5} 0 ${-height - 5} Z M-42 -115 Q-78 -95 -${wear === "kimono" ? 90 : 73} -30 Q-85 10 0 2 Q85 10 ${wear === "kimono" ? 90 : 73} -30 Q78 -95 42 -115 Z" fill="transparent" stroke="transparent"/>
       </g>
-    </g>`;
-  }
-
-  // 高凳上垂下的小腿，原点是凳面中心；只画在两条凳腿之间，像是从凳面后面伸出来。
-  function stoolLegs(wear, cloth, id) {
-    const dark = (hex, k) => "#" + hex.slice(1).match(/../g).map((c) => Math.round(parseInt(c, 16) * k).toString(16).padStart(2, "0")).join("");
-    const shade = (fill, gid) => `<linearGradient id="${gid}"><stop stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#1c1410" stop-opacity=".35"/></linearGradient>`;
-    const leg = (x, fill) => `<rect x="${x}" y="17" width="14" height="38" rx="6" fill="${fill}"/><rect x="${x}" y="17" width="14" height="38" rx="6" fill="url(#${id}-leg)"/>`;
-    if (wear === "casual") {
-      const pants = dark(cloth, .42);
-      return `<g class="guest-legs" filter="url(#guest-soft)"><defs>${shade(pants, id + "-leg")}</defs>
-        ${leg(-17, pants)}${leg(3, pants)}
-        <path d="M-20 56 q0 -6 10 -6 q10 0 11 6 q0 5 -10 5 q-11 0 -11 -5 Z M-1 56 q1 -6 11 -6 q10 0 10 6 q0 5 -11 5 q-10 0 -10 -5 Z" fill="#6e4a34"/>
-        <path d="M-17 52 h11 M3 52 h11" stroke="#f3e6d2" stroke-width="2" stroke-linecap="round" opacity=".8"/>
-      </g>`;
-    }
-    const hem = dark(cloth, .62);
-    return `<g class="guest-legs" filter="url(#guest-soft)"><defs>${shade(hem, id + "-leg")}</defs>
-      <rect x="-15" y="34" width="11" height="18" rx="5" fill="#f7f1e6"/><rect x="4" y="34" width="11" height="18" rx="5" fill="#f7f1e6"/>
-      <path d="M-22 15 H22 L20 40 Q0 46 -20 40 Z" fill="${hem}"/><path d="M-22 15 H22 L20 40 Q0 46 -20 40 Z" fill="url(#${id}-leg)"/>
-      <rect x="-18" y="51" width="16" height="6" rx="3" fill="#9a6a45"/><rect x="2" y="51" width="16" height="6" rx="3" fill="#9a6a45"/>
-      <path d="M-10 51 v-4 M10 51 v-4" stroke="#b6423a" stroke-width="2.5" stroke-linecap="round"/>
     </g>`;
   }
 
@@ -537,10 +498,10 @@
     tree: { counter: [962, 490, 1.15], tatami: [404, 498, 1.1] },
     umbrella: { counter: [138, 645, 1.1], tatami: [228, 530, 0.95] },
   };
-  // 雨：吧台看得到门边的障子，座敷看得到院子的窗；暖帘下摆滴水
+  // 雨只位于门窗，近景玻璃水珠与湿庭院材质共用原场景透视。
   const RAIN_VIEWS = {
-    counter: { win: [28, 295, 137, 297], drops: [[45, 284], [80, 288], [118, 290], [155, 292], [188, 294]] },
-    tatami: { win: [452, 226, 358, 182], drops: [[40, 256], [80, 260], [120, 262], [160, 266], [192, 266]] },
+    counter: { win: [28, 295, 137, 297] },
+    tatami: { win: [452, 226, 358, 182] },
   };
   const decoAt = (kind, room) => {
     const [x, y, k] = DECO_SPOTS[kind][room];
@@ -548,24 +509,17 @@
   };
   function renderAtmosphere() {
     const scene = $(".scene");
-    if (rainy) {
-      scene.querySelector("defs").insertAdjacentHTML("beforeend", `
-        <pattern id="rain-pat" width="40" height="80" patternUnits="userSpaceOnUse">
-          <path d="M6 0 l-4 16 M26 30 l-4 16 M16 56 l-4 16 M36 12 l-3 12" stroke="#eef4fa" stroke-width="2.2" stroke-linecap="round" opacity=".9"/>
-        </pattern>`);
-    }
     $$(".room-layer").forEach((layer) => {
       const room = layer.dataset.room;
       let html = "";
       if (rainy) {
-        const { win: [x, y, w, h], drops } = RAIN_VIEWS[room];
-        html += `
-          <clipPath id="rain-clip-${room}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath>
-          <g class="rain" clip-path="url(#rain-clip-${room})">
-            <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#41557e" opacity=".32"/>
-            <rect class="rain-fall" x="${x}" y="${y - 80}" width="${w}" height="${h + 80}" fill="url(#rain-pat)"/>
-          </g>
-          ${drops.map(([dx, dy], i) => `<ellipse class="rain-drop" style="animation-delay:${(i * 0.37) % 1.4}s" cx="${dx}" cy="${dy}" rx="2.4" ry="3.4" fill="#cfe0f0" stroke="#7fa6c8" stroke-width=".8"/>`).join("")}
+        const { win: [x, y, w, h] } = RAIN_VIEWS[room];
+        const glints = Array.from({ length: room === "tatami" ? 18 : 10 }, (_, i) => {
+          const dx = x + 5 + (i * 67.3) % (w - 10), dy = y + 4 + (i * 43.7) % (h - 20);
+          return `<ellipse class="rain-glint" cx="${dx}" cy="${dy}" rx="${.4 + i % 3 * .22}" ry="${.8 + i % 4 * .3}" style="--rain-duration:${4 + i % 5}s;animation-delay:-${i * .83}s" fill="#dce9e9" opacity=".16"/>`;
+        }).join("");
+        html += `<clipPath id="rain-clip-${room}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath>
+          <g class="rain" clip-path="url(#rain-clip-${room})"><image href="assets/art/rain-${room}.webp" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none"/>${glints}</g>
           ${decoAt("umbrella", room)}`;
       }
       if (festival && DECO_SPOTS[festival.deco]) html += decoAt(festival.deco, room);
