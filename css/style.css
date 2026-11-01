@@ -634,10 +634,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 @keyframes hands-offer { 50% { transform: translate(3px, 5px); } }
 /* 完整人偶始终保持一张连体图。座面锁定，问候为轻点头，结束回到同一姿态。 */
 .guest-doll { transform-box: view-box; transform-origin: 0 0; }
-.guest-doll.act-wave { animation: guest-greet 1s cubic-bezier(.4,0,.2,1); }
-.guest-doll.act-chomp { animation: guest-chew .6s ease-in-out; }
-.guest-doll.act-sit { animation: guest-settle .5s ease-out; }
-.guest-doll.act-happy { animation: guest-content .9s ease-in-out; }
+.guest-doll.act-wave .guest-upper { animation: guest-greet 1s cubic-bezier(.4,0,.2,1); }
+.guest-doll.act-chomp .guest-upper { animation: guest-chew .6s ease-in-out; }
+.guest-doll.act-sit .guest-upper { animation: guest-settle .5s ease-out; }
+.guest-doll.act-happy .guest-upper { animation: guest-content .9s ease-in-out; }
 @keyframes guest-greet { 0%,100% { transform:none; } 40%,60% { transform:rotate(1.2deg); } }
 @keyframes guest-chew { 0%,100% { transform:none; } 35%,70% { transform:rotate(.6deg); } }
 @keyframes guest-settle { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
@@ -647,3 +647,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 #shop-cat svg { pointer-events: none; }
 #shop-cat:focus-visible { outline: none; }
 .food-sprite { filter: none; }
+
+/* T-64：凳面、凳腿和被遮挡的小腿固定，只有坐姿上半身参与问候。 */
+.guest-upper { transform-box: view-box; transform-origin: 0 0; }
+.guest-stool-fixed { pointer-events:none; }
