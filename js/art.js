@@ -38,40 +38,22 @@ window.KOBUNE_ART = (() => {
     return `<svg class="${cls}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><defs>${defs}</defs>${T.filter ? `<g filter="url(#kb-grain)">${shaded}</g>` : shaded}</svg>`;
   };
 
-  // ---------- 单片刺身（40×60） ----------
+  // 原创透明食物图集。每格 362×362，保持现有鱼种数据与调用接口。
+  const foodSprite = (slot, x, y, w, h, fish = null, base = null) => {
+    const id = "food-material-" + illustrationId++;
+
+    const rgb = (hex) => hex.slice(1).match(/../g).map((v) => parseInt(v, 16));
+    const tone = fish && base ? rgb(fish.color).map((v, i) => Math.min(2.5, v / rgb(base)[i])) : null;
+    const filter = tone ? `<defs><filter id="${id}" color-interpolation-filters="sRGB"><feColorMatrix values="${tone[0]} 0 0 0 0 0 ${tone[1]} 0 0 0 0 0 ${tone[2]} 0 0 0 0 0 1 0"/></filter></defs>` : "";
+    return `${filter}<image class="food-sprite" preserveAspectRatio="none" data-food="${fish ? fish.id : slot}" x="${x}" y="${y}" width="${w}" height="${h}" href="assets/art/food-${slot}.webp" ${tone ? `filter="url(#${id})"` : ""}/>`;
+  };
+  const redFish = (f) => /maguro|toro|akami|katsuo/.test(f.id);
   function slicePiece(f) {
-    f = fc(f);
-    const c = f.color, c2 = f.color2;
-    switch (f.shape) {
-      case "round":
-        return `<circle cx="20" cy="36" r="16" fill="${c}" ${OL()}/>
-          <circle cx="20" cy="36" r="9" fill="${c2}" opacity=".55"/>
-          <path d="M10 30 Q13 23 20 22" ${HI}/>`;
-      case "shrimp":
-        return `<path d="M22 10 l-7 -9 l9 4 l5 -5 l1 10 z" fill="#e2553c" ${OL()}/>
-          <path d="M8 50 Q4 28 14 12 Q22 4 30 9 Q37 17 33 34 Q29 50 18 55 Q10 56 8 50 Z" fill="${c2}" ${OL()}/>
-          <g stroke="${c}" stroke-width="5" stroke-linecap="round" fill="none">
-            <path d="M10 22 Q20 18 31 21"/><path d="M8 34 Q20 30 33 33"/><path d="M9 46 Q19 43 30 45"/>
-          </g>
-          <path d="M12 16 Q16 11 22 10" ${HI}/>`;
-      case "roe":
-        return `<g ${OL()}>
-            <ellipse cx="13" cy="38" rx="8" ry="14" fill="${c}" transform="rotate(-14 13 38)"/>
-            <ellipse cx="27" cy="38" rx="8" ry="14" fill="${c}" transform="rotate(14 27 38)"/>
-            <ellipse cx="20" cy="32" rx="8" ry="15" fill="${c}"/>
-          </g>
-          <g fill="${c2}"><circle cx="18" cy="26" r="2"/><circle cx="23" cy="34" r="2"/><circle cx="12" cy="40" r="2"/><circle cx="28" cy="42" r="2"/><circle cx="19" cy="42" r="2"/></g>`;
-      case "pearl": {
-        const pts = [[12, 30], [26, 28], [19, 40], [8, 44], [30, 42], [19, 52], [20, 20]];
-        return pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="${c}" ${OL()}/><circle cx="${x - 2}" cy="${y - 2}" r="2" fill="#fff" opacity=".85"/>`).join("");
-      }
-      default:
-        return `<path d="M6 50 Q2 30 8 13 Q14 3 26 4 Q37 8 35 26 Q33 44 22 54 Q12 58 6 50 Z" fill="${c}" ${OL()}/>
-          <g stroke="${c2}" stroke-width="3.5" stroke-linecap="round" fill="none" opacity=".9">
-            <path d="M10 45 Q12 25 26 11"/><path d="M18 51 Q22 33 32 19"/>
-          </g>
-          <path d="M11 22 Q14 13 22 9" ${HI}/>`;
-    }
+    if (f.shape === "round") return foodSprite(10, 0, 8, 40, 48, f, "#f6ece6");
+    if (f.shape === "shrimp") return foodSprite(4, 0, 0, 40, 58);
+    if (f.shape === "roe" || f.shape === "pearl") return foodSprite(f.shape === "pearl" ? 6 : 5, 0, 3, 40, 54);
+    const slot = redFish(f) ? 9 : f.id === "salmon" ? 8 : 3;
+    return foodSprite(slot, 0, 0, 40, 60, f, slot === 9 ? "#b3202f" : slot === 8 ? "#f28a36" : "#f6ece6");
   }
 
   // n 片刺身错开叠放
@@ -86,58 +68,18 @@ window.KOBUNE_ART = (() => {
   }
 
   // ---------- 握寿司 / 军舰 / 细卷（80×52 / 60×60） ----------
-  const rice = () => `<path d="M8 36 Q6 26 18 24 L62 24 Q74 26 72 36 Q70 46 40 46 Q10 46 8 36 Z" fill="${T.rice}" ${RICE_OL()}/>
-    <g stroke="${T.grain}" stroke-width="2" fill="none" stroke-linecap="round"><path d="M16 40 q3 2 6 0"/><path d="M30 42 q3 2 6 0"/><path d="M46 42 q3 2 6 0"/><path d="M58 38 q3 2 6 0"/></g>`;
-
+  const rice = () => foodSprite(0, 8, 25, 64, 23);
   function topping(f) {
-    f = fc(f);
-    const c = f.color, c2 = f.color2;
-    if (f.shape === "round") {
-      return `<path d="M10 27 Q12 13 40 13 Q68 13 70 27 Q66 33 40 33 Q14 33 10 27 Z" fill="${c}" ${OL()}/>
-        <ellipse cx="40" cy="22" rx="18" ry="5" fill="${c2}" opacity=".55"/>
-        <path d="M18 20 Q26 16 34 16" ${HI}/>`;
-    }
-    if (f.shape === "shrimp") {
-      return `<path d="M70 20 l10 -9 l-2 9 l7 2 l-10 5 z" fill="#e2553c" ${OL()}/>
-        <path d="M4 28 Q6 12 34 10 Q62 8 74 20 Q74 30 58 30 L20 32 Q6 34 4 28 Z" fill="${c2}" ${OL()}/>
-        <g stroke="${c}" stroke-width="5" stroke-linecap="round" fill="none">
-          <path d="M18 30 Q20 18 28 12"/><path d="M34 30 Q36 18 44 11"/><path d="M50 29 Q52 18 60 13"/>
-        </g>
-        <path d="M12 20 Q20 14 28 13" ${HI}/>`;
-    }
-    return `<path d="M4 28 Q6 12 34 10 Q64 8 76 22 Q76 30 60 30 L20 32 Q6 34 4 28 Z" fill="${c}" ${OL()}/>
-      <g stroke="${c2}" stroke-width="3.5" stroke-linecap="round" fill="none" opacity=".9">
-        <path d="M18 30 Q22 18 34 12"/><path d="M36 30 Q40 18 52 12"/><path d="M54 29 Q58 20 68 16"/>
-      </g>
-      <path d="M12 21 Q20 14 30 13" ${HI}/>`;
+    if (f.shape === "shrimp") return foodSprite(4, 1, 1, 78, 39);
+    const slot = f.shape === "round" || (!redFish(f) && f.id !== "salmon") ? 3 : redFish(f) ? 2 : 1;
+    return foodSprite(slot, 1, 6, 78, 31, f, slot === 2 ? "#b3202f" : slot === 1 ? "#f28a36" : "#f6ece6");
   }
-
-  function gunkanBody(f) {
-    f = fc(f);
-    const c = f.color, c2 = f.color2;
-    const top = f.shape === "pearl"
-      ? [16, 26, 36, 46, 56, 64, 21, 31, 41, 51, 60].map((x, i) => {
-          const y = i < 6 ? 18 : 11;
-          return `<circle cx="${x}" cy="${y}" r="6" fill="${c}" ${OL()}/><circle cx="${x - 2}" cy="${y - 2}" r="1.8" fill="#fff" opacity=".85"/>`;
-        }).join("")
-      : `<g ${OL()}>${[18, 30, 42, 54, 62].map((x, i) => `<ellipse cx="${x}" cy="${15 + (i % 2) * 3}" rx="8" ry="6" fill="${c}"/>`).join("")}</g>
-         <g fill="${c2}"><circle cx="24" cy="14" r="1.8"/><circle cx="40" cy="17" r="1.8"/><circle cx="56" cy="14" r="1.8"/></g>`;
-    return `<rect x="10" y="20" width="60" height="26" rx="7" fill="${NORI}" ${OL()}/>
-      <path d="M18 26 q4 8 0 16 M34 26 q4 8 0 16 M52 26 q4 8 0 16" stroke="#2f3d32" stroke-width="3" fill="none"/>
-      <ellipse cx="40" cy="20" rx="29" ry="5" fill="${T.rice}" ${RICE_OL()}/>
-      ${top}`;
-  }
-
-  const nigiriBody = (f) => (f.shape === "roe" || f.shape === "pearl" ? gunkanBody(f) : rice() + topping(f));
+  const nigiriBody = (f) => f.shape === "roe" || f.shape === "pearl"
+    ? foodSprite(f.shape === "pearl" ? 6 : 5, 7, 0, 66, 50)
+    : rice() + topping(f);
   const nigiri = (f) => svg(80, 52, nigiriBody(f), "art art-nigiri");
-
   function maki(f) {
-    return svg(60, 60, `
-      <circle cx="30" cy="31" r="25" fill="${NORI}" ${OL()}/>
-      <circle cx="30" cy="31" r="18" fill="${T.rice}" stroke="${T.grain}" stroke-width="2"/>
-      <g stroke="#e6dfd4" stroke-width="2" fill="none" stroke-linecap="round"><path d="M17 26 q3 -2 5 0"/><path d="M38 20 q3 -2 5 0"/><path d="M36 42 q3 -2 5 0"/></g>
-      <rect x="22" y="23" width="16" height="16" rx="4" fill="${col(f.color)}" ${OL()}/>
-      <path d="M25 27 q3 -2 6 -2" ${HI}/>`, "art art-maki");
+    return svg(60, 60, foodSprite(7, 0, 0, 60, 60) + `<ellipse cx="30" cy="31" rx="9" ry="10" fill="${f.color}" opacity=".3"/>`, "art art-maki");
   }
 
   // ---------- 木屐盘（堂食） ----------
@@ -178,7 +120,7 @@ window.KOBUNE_ART = (() => {
   // ---------- 生日玉子烧（T-58）：白盘三块玉子烧，中间那块插一根蜡烛 ----------
   function tamagoyaki() {
     const piece = (x, candle) => `<g class="bite"><g transform="translate(${x} 0)">
-      <rect x="0" y="34" width="44" height="26" rx="6" fill="#f6c94a" ${OL()}/>
+      ${foodSprite(11, -3, 27, 50, 40)}
       <path d="M4 42 Q22 38 40 42 M4 50 Q22 46 40 50" stroke="#e0a43a" stroke-width="1.6" fill="none"/>
       <path d="M6 37 q8 -2 14 0" ${HI}/>
       ${candle ? `<rect x="18" y="0" width="8" height="35" rx="2" fill="#f2a7b6" ${OL()}/>

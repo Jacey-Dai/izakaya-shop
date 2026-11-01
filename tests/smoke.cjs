@@ -20,12 +20,17 @@ const root = path.resolve(__dirname, '..');
   const close = async () => { await page.keyboard.press('Escape'); assert.equal(await page.locator('#overlay').isHidden(), true); };
   try {
     await page.goto(pathToFileURL(path.join(root, 'index.html')).href); await loaded();
-    assert.equal(await page.locator('.scene image').count(), 3);
+    assert.ok(await page.locator('.scene image').count() >= 3);
+    assert.equal(await page.locator('#shop-cat image').count(), 1);
+    await page.locator('#shop-cat').focus(); await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#shop-cat').getAttribute('data-pose'), '4');
+    assert.match(await page.locator('#live-status').textContent(), /Mikan/);
+    assert.equal(await page.locator('#overlay').isHidden(), true);
     assert.equal(await page.evaluate(() => JSON.stringify(Object.keys(I18N.zh).sort()) === JSON.stringify(Object.keys(I18N.en).sort())), true);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     // Local asset decoding under file://, including actual transparency on the chef.
     assert.equal(await page.evaluate(async () => {
-      for (const src of ['assets/art/izakaya-room.webp', 'assets/art/haruta.webp', 'assets/art/tatami-room.webp', 'assets/art/guest-dolls.webp', 'assets/art/guest-accessories.webp']) { const im = new Image(); im.src = src; await im.decode(); if (!im.naturalWidth) return false; }
+      for (const src of ['assets/art/izakaya-room.webp', 'assets/art/haruta.webp', 'assets/art/tatami-room.webp', 'assets/art/guest-dolls.webp', 'assets/art/guest-accessories.webp', ...Array.from({length:6},(_,i)=>'assets/art/cat-'+i+'.webp'), ...Array.from({length:3},(_,i)=>'assets/art/chef-'+i+'.webp'), ...Array.from({length:12},(_,i)=>'assets/art/food-'+i+'.webp')]) { const im = new Image(); im.src = src; await im.decode(); if (!im.naturalWidth) return false; }
       return true;
     }), true);
     // Deployment regression: a returning browser must request versioned CSS/JS.
@@ -39,7 +44,7 @@ const root = path.resolve(__dirname, '..');
       link.sheet.disabled = true;
       const transparent = value => value === 'transparent' || value === 'rgba(0, 0, 0, 0)';
       const areas = [...document.querySelectorAll('.hit-area')];
-      const safe = areas.length === 21 && areas.every(e => transparent(getComputedStyle(e).fill) && transparent(getComputedStyle(e).stroke));
+      const safe = areas.length === 22 && areas.every(e => transparent(getComputedStyle(e).fill) && transparent(getComputedStyle(e).stroke));
       const dotsHidden = [...document.querySelectorAll('.hotspot-dot')].every(e => getComputedStyle(e).opacity === '0');
       link.sheet.disabled = false;
       return safe && dotsHidden;
