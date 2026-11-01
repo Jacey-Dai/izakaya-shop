@@ -209,14 +209,9 @@
     let extra = "";
     if (accessory === "hat") extra = `<svg class="guest-accessory guest-hat" data-fit="${style}" x="${hat.cx - hat.width / 2}" y="${-height - hat.lift}" width="${hat.width}" height="${hat.height}" viewBox="43 153 881 614" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
     if (accessory === "kanzashi") extra = `<svg class="guest-accessory" x="16" y="${-height + 30}" width="58" height="48" viewBox="1020 178 713 584" overflow="hidden"><image href="assets/art/guest-accessories.webp" width="1774" height="887"/></svg>`;
-    return `<g class="guest-doll" data-pose="${onStool ? "stool" : "floor"}" data-hair="${style}" data-clothing="${wear}" data-outfit="${opt("outfit").id}" data-hair-color="${opt("hairColor").id}" data-accessory="${accessory}">
-      ${onStool ? `<ellipse cx="0" cy="-2" rx="43" ry="5" fill="#36281d" opacity=".18"/>` : `<ellipse cx="0" cy="-2" rx="${wear === "kimono" ? 76 : 58}" ry="7" fill="#36281d" opacity=".22"/>`}
-      <g transform="translate(0 ${-lift})">
-      ${accessory === "hat" ? `<defs><clipPath id="${id}-hat-clearance" clipPathUnits="userSpaceOnUse"><path d="M-125 ${brimY} Q${hat.cx} ${brimY + hat.height * .28} 125 ${brimY} V${onStool ? 100 : 20} H-125 Z"/></clipPath></defs>` : ""}
-      <g class="guest-hat-clearance" ${accessory === "hat" ? `clip-path="url(#${id}-hat-clearance)"` : ""}>
-      <svg class="guest-doll-art" x="-110" y="${-height}" width="220" height="${onStool ? 260 : height}" viewBox="${x - 5} ${y - 3} ${w + 10} ${h + 6}" overflow="hidden">
+    const fullFigure = `      <svg class="guest-doll-art" id="${id}-complete" x="-110" y="${-height}" width="220" height="${onStool ? 260 : height}" viewBox="${x - 5} ${y - 3} ${w + 10} ${h + 6}" overflow="hidden">
         <defs>
-          <image id="${id}-sprite" href="assets/art/${onStool ? "guest-stool" : "guest-dolls"}.webp" x="${-col * 384}" y="${-row * (onStool ? 512 : 1024 / 3)}" width="1536" height="${onStool ? 1536 : 1024}"/>
+          <image id="${id}-sprite" href="assets/art/${onStool ? "guest-stool-rear" : "guest-dolls"}.webp" x="${-col * 384}" y="${-row * (onStool ? 512 : 1024 / 3)}" width="1536" height="${onStool ? 1536 : 1024}"/>
           <filter id="${id}-neutral" filterUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}" color-interpolation-filters="sRGB">
             <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -4 0 4 0 1" result="neutral"/>
             <feComposite in="neutral" in2="SourceGraphic" operator="in"/>
@@ -225,20 +220,26 @@
           <filter id="${id}-cloth" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${tint(opt("outfit").color)}"/></filter>
           <mask id="${id}-neutral-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}"><use href="#${id}-sprite" filter="url(#${id}-neutral)"/></mask>
           <mask id="${id}-hair-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}">${hairRegion("white")}</mask>
-          <mask id="${id}-cloth-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}"><rect width="384" height="${onStool ? 512 : wear === "casual" ? 316 : 342}" fill="white"/>${hairRegion("black")}</mask>
+          <mask id="${id}-cloth-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="384" height="${onStool ? 512 : 342}"><rect width="384" height="${onStool ? 384 : wear === "casual" ? 316 : 342}" fill="white"/>${hairRegion("black")}</mask>
         </defs>
-        <g>
+        <g id="${id}-painted">
         <use href="#${id}-sprite"/>
         <g mask="url(#${id}-neutral-mask)">
           <g mask="url(#${id}-cloth-mask)"><use href="#${id}-sprite" filter="url(#${id}-cloth)"/></g>
           <g mask="url(#${id}-hair-mask)"><use href="#${id}-sprite" filter="url(#${id}-hair)"/></g>
         </g>
         </g>
-      </svg>
-      </g>
-      ${extra}
-      <path class="guest-hit" d="M0 ${-height - 5} C-86 ${-height - 5} -86 ${-height + 115} 0 ${-height + 115} C86 ${-height + 115} 86 ${-height - 5} 0 ${-height - 5} Z M-42 -115 Q-78 -95 -${wear === "kimono" ? 90 : 73} -30 Q-85 10 0 2 Q85 10 ${wear === "kimono" ? 90 : 73} -30 Q78 -95 42 -115 Z" fill="transparent" stroke="transparent"/>
-      </g>
+      </svg>`;
+    const hatClearance = accessory === "hat" ? `<defs><clipPath id="${id}-hat-clearance" clipPathUnits="userSpaceOnUse"><path d="M-125 ${brimY} Q${hat.cx} ${brimY + hat.height * .28} 125 ${brimY} V${onStool ? 130 : 20} H-125 Z"/></clipPath></defs>` : "";
+    const body = `<g class="guest-hat-clearance" ${accessory === "hat" ? `clip-path="url(#${id}-hat-clearance)"` : ""}>${fullFigure}</g>${extra}`;
+    const seated = onStool ? `
+      <defs><clipPath id="${id}-upper"><rect x="-125" y="-300" width="250" height="300"/></clipPath></defs>
+      <g class="guest-upper" clip-path="url(#${id}-upper)">${body}</g>
+      <ellipse class="stool-contact" cx="0" cy="105" rx="47" ry="5" fill="#493323" opacity=".14"/><svg class="guest-stool-fixed" x="-91" y="0" width="182" height="110" viewBox="15 372 354 140" preserveAspectRatio="none" overflow="hidden"><use href="#${id}-painted"/></svg>` : `<g class="guest-upper">${body}</g>`;
+    // Clear only the occupied background stool; the complete doll+stool supplies the new occlusion.
+    return `${onStool ? `<image class="occupied-stool-clear" href="assets/art/counter-seat-clear.webp" x="-70" y="-18" width="140" height="152" pointer-events="none"/>` : ""}<g class="guest-doll" data-pose="${onStool ? "stool" : "floor"}" data-integrated-stool="${onStool}" data-hair="${style}" data-clothing="${wear}" data-outfit="${opt("outfit").id}" data-hair-color="${opt("hairColor").id}" data-accessory="${accessory}">
+      ${hatClearance}${seated}
+      <path class="guest-hit" d="M0 ${-height - 5} C-86 ${-height - 5} -86 ${-height + 115} 0 ${-height + 115} C86 ${-height + 115} 86 ${-height - 5} 0 ${-height - 5} Z M-42 -115 Q-78 -95 -85 -30 Q-80 8 0 2 Q80 8 85 -30 Q78 -95 42 -115 Z" fill="transparent" stroke="transparent"/>
     </g>`;
   }
 

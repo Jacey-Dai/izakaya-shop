@@ -13,7 +13,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.evaluate(()=>localStorage.setItem('kobune.seat','"counter"'));
     await page.reload();await page.waitForTimeout(1700);
     assert.equal(await page.locator('.guest-legs,.guest-forearm').count(),0);
-    assert.equal(await page.locator('#guest image[href="assets/art/guest-stool.webp"]').count(),1);
+    assert.equal(await page.locator('#guest image[href="assets/art/guest-stool-rear.webp"]').count(),1);
     assert.equal(await page.locator('.rain image').count(),2);
     assert.equal(await page.locator('.rain-fall,.rain-drop,#rain-pat').count(),0);
     assert.equal(await page.locator('.deco-pumpkin image[href="assets/art/pumpkin.webp"]').count(),2);
@@ -35,14 +35,14 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       for(const hair of ['short','bun','ponytail','long']){
         await page.locator('[data-k="hairStyle"][data-v="'+hair+'"]').click();
         assert.equal(await page.locator('#guest .guest-doll').getAttribute('data-pose'),'stool');
-        assert.equal(await page.locator('#guest image[href="assets/art/guest-stool.webp"]').count(),1);
+        assert.equal(await page.locator('#guest image[href="assets/art/guest-stool-rear.webp"]').count(),1);
         assert.equal(await page.locator('.guest-legs,.guest-forearm').count(),0);
       }
     }
     await page.locator('[data-k="accessory"][data-v="hat"]').click();
     await page.keyboard.press('Escape');
     assert.match(await page.locator('#guest .guest-hat-clearance').getAttribute('clip-path'),/hat-clearance/);
-    assert.match(await page.locator('#guest clipPath[id$="hat-clearance"] path').getAttribute('d'),/V100/);
+    assert.match(await page.locator('#guest clipPath[id$="hat-clearance"] path').getAttribute('d'),/V130/);
     await page.mouse.move(1400,10);await page.screenshot({path:'/tmp/guest-weather-hat.png',fullPage:true});
     await page.evaluate(()=>localStorage.setItem('kobune.seat','"tatami"'));
     await page.reload();await page.waitForTimeout(1800);

@@ -123,7 +123,7 @@ window.SHOP_DATA = {
   ],
 
   seats: [
-    { id: "counter", name: "吧台席", jp: "カウンター席", desc: "坐在师傅正前方，看着他切鱼。师傅会多和你聊几句。", marker: [594, 579] },
+    { id: "counter", name: "吧台席", jp: "カウンター席", desc: "坐在师傅正前方，看着他切鱼。师傅会多和你聊几句。", marker: [600, 566] },
     { id: "tatami", name: "和室座敷", jp: "座敷", desc: "脱鞋坐在榻榻米上，矮桌和坐垫，适合慢慢吃。", marker: [635, 675] },
   ],
 

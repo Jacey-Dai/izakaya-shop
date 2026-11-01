@@ -30,7 +30,7 @@ const root = path.resolve(__dirname, '..');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     // Local asset decoding under file://, including actual transparency on the chef.
     assert.equal(await page.evaluate(async () => {
-      for (const src of ['assets/art/izakaya-room.webp', 'assets/art/haruta.webp', 'assets/art/tatami-room.webp', 'assets/art/guest-dolls.webp', 'assets/art/guest-accessories.webp', ...['guest-stool','pumpkin','umbrella','rain-counter','rain-tatami'].map(x=>'assets/art/'+x+'.webp'), ...Array.from({length:6},(_,i)=>'assets/art/cat-'+i+'.webp'), ...Array.from({length:3},(_,i)=>'assets/art/chef-'+i+'.webp'), ...Array.from({length:12},(_,i)=>'assets/art/food-'+i+'.webp')]) { const im = new Image(); im.src = src; await im.decode(); if (!im.naturalWidth) return false; }
+      for (const src of ['assets/art/izakaya-room.webp', 'assets/art/haruta.webp', 'assets/art/tatami-room.webp', 'assets/art/guest-dolls.webp', 'assets/art/guest-accessories.webp', 'assets/art/counter-seat-clear.webp', ...['guest-stool-rear','pumpkin','umbrella','rain-counter','rain-tatami'].map(x=>'assets/art/'+x+'.webp'), ...Array.from({length:6},(_,i)=>'assets/art/cat-'+i+'.webp'), ...Array.from({length:3},(_,i)=>'assets/art/chef-'+i+'.webp'), ...Array.from({length:12},(_,i)=>'assets/art/food-'+i+'.webp')]) { const im = new Image(); im.src = src; await im.decode(); if (!im.naturalWidth) return false; }
       return true;
     }), true);
     // Deployment regression: a returning browser must request versioned CSS/JS.
@@ -228,7 +228,8 @@ const root = path.resolve(__dirname, '..');
     const sl = await cp.locator('.pslice').first().boundingBox(); const bd = await cp.locator('#plating-board').boundingBox();
     await cp.mouse.move(sl.x + sl.width / 2, sl.y + sl.height / 2); await cp.mouse.down(); await cp.mouse.move(bd.x + bd.width * 0.3, bd.y + bd.height * 0.5, { steps: 4 }); await cp.mouse.up();
     await cp.locator('#plate-rotate').click(); await cp.locator('#plate-serve').click();
-    await cp.locator('.stars').waitFor({ timeout: 5000 }); assert.equal(await cp.locator('.stars').getAttribute('aria-label'), '3 of 3 stars');
+    // Cutting inputs queue 700ms actions; six quick cuts plus greeting and serving can exceed 5s.
+    await cp.locator('.stars').waitFor({ timeout: 12000 }); assert.equal(await cp.locator('.stars').getAttribute('aria-label'), '3 of 3 stars');
     assert.equal(await cp.locator('#scene-dish .art-platter').count(), 1); await cp.locator('#result-ok').click();
     await cp.locator('#scene-dish').waitFor({ state: 'hidden', timeout: 12000 });
     assert.equal(await cp.evaluate(() => JSON.parse(localStorage.getItem('kobune.chefStats')).served), 1);
