@@ -471,15 +471,6 @@ button { font: inherit; cursor: pointer; }
 @keyframes chef-slice { 20%, 60% { transform: rotate(-2deg); } 40%, 80% { transform: translateY(2px) rotate(1.5deg); } }
 @keyframes chef-nigiri { 25%, 75% { transform: translateY(4px) scale(1.02, .97); } 50% { transform: none; } }
 @keyframes chef-serve { 50% { transform: translate(14px, 8px) rotate(4deg) scale(1.03); } }
-.guest-doll { transform-box: fill-box; transform-origin: 50% 100%; }
-.guest-doll.act-wave { animation: guest-wave 1s ease-in-out; }
-.guest-doll.act-chomp { animation: guest-chomp .3s ease-in-out 2; }
-.guest-doll.act-happy { animation: guest-happy .9s ease-in-out; }
-.guest-doll.act-sit { animation: guest-sit .5s ease-out; }
-@keyframes guest-wave { 25% { transform: rotate(-5deg); } 50% { transform: rotate(4deg); } 75% { transform: rotate(-3deg); } }
-@keyframes guest-chomp { 50% { transform: translateY(-3px) scale(1.02, .98); } }
-@keyframes guest-happy { 25%, 75% { transform: translateY(-10px); } 50% { transform: none; } }
-@keyframes guest-sit { from { transform: translateY(-24px); opacity: 0; } 60% { transform: translateY(3px); opacity: 1; } }
 .pop-say { font-family: var(--font-body); font-weight: 700; font-size: 26px; text-anchor: middle; fill: #fff8ea; stroke: #6b4632; stroke-width: 6px; paint-order: stroke; stroke-linejoin: round; pointer-events: none; animation: say-pop 1.3s ease-out forwards; }
 @keyframes say-pop { 0% { opacity: 0; transform: translateY(6px); } 15%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-18px); } }
 .modal { border: 1px solid #dcc7aa; box-shadow: 0 28px 90px #35271d55, inset 0 2px 0 #fffdf9; line-height: 1.65; }
@@ -586,10 +577,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 @keyframes flame { from { transform: scale(1, 1) rotate(-4deg); } to { transform: scale(.85, 1.12) rotate(4deg); } }
 
 /* 节日装饰与雨天（T-55 / T-56）；减少动态效果时全局关闭动画，只剩静态画面 */
-.rain-fall { animation: rain-fall .7s linear infinite; }
-@keyframes rain-fall { to { transform: translate(0, 80px); } }
-.rain-drop { transform-box: fill-box; animation: rain-drip 1.4s ease-in infinite; }
-@keyframes rain-drip { 0%, 40% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(46px); opacity: 0; } }
+/* 雨景以景深 / 湿材质底图表现，近处水珠只有细微滑动反光。 */
+.rain-glint { animation: rain-refraction var(--rain-duration, 6s) ease-in infinite; filter: blur(.25px); }
+@keyframes rain-refraction { 0% { opacity:0; transform:translateY(0); } 35% { opacity:.2; } 100% { opacity:0; transform:translateY(14px); } }
 .deco .sway { transform-box: fill-box; transform-origin: 50% 0; animation: sway 2.6s ease-in-out infinite alternate; }
 @keyframes sway { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
 .deco-glow { animation: glow 2.2s ease-in-out infinite alternate; }
@@ -642,21 +632,18 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 @keyframes hands-slice { 50% { transform: translateY(-3px) rotate(-.5deg); } }
 @keyframes hands-shape { 50% { transform: scaleX(.96) translateY(-2px); } }
 @keyframes hands-offer { 50% { transform: translate(3px, 5px); } }
-.guest-forearm { display: none; transform-origin: 0 0; }
-.guest-doll:is(.act-chomp,.act-wave) .guest-forearm { display: inline; }
-.guest-doll.act-chomp { animation: guest-nod .6s ease-in-out; }
-.guest-doll.act-chomp .guest-forearm { animation: chopstick-lift .6s ease-in-out; }
-.guest-doll.act-wave { animation: none; }
-.guest-doll.act-wave .guest-forearm { animation: doll-wave .33s ease-in-out 3; }
-.guest-doll.act-wave .guest-chopsticks { display: none; }
-@keyframes guest-nod { 50% { transform: translateY(1px); } }
-@keyframes chopstick-lift { 0%,100% { transform: rotate(24deg); } 45%,65% { transform: rotate(-28deg) translateY(-5px); } }
-@keyframes doll-wave { 50% { transform: rotate(22deg); } }
+/* 完整人偶始终保持一张连体图。座面锁定，问候为轻点头，结束回到同一姿态。 */
+.guest-doll { transform-box: view-box; transform-origin: 0 0; }
+.guest-doll.act-wave { animation: guest-greet 1s cubic-bezier(.4,0,.2,1); }
+.guest-doll.act-chomp { animation: guest-chew .6s ease-in-out; }
+.guest-doll.act-sit { animation: guest-settle .5s ease-out; }
+.guest-doll.act-happy { animation: guest-content .9s ease-in-out; }
+@keyframes guest-greet { 0%,100% { transform:none; } 40%,60% { transform:rotate(1.2deg); } }
+@keyframes guest-chew { 0%,100% { transform:none; } 35%,70% { transform:rotate(.6deg); } }
+@keyframes guest-settle { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+@keyframes guest-content { 0%,100% { transform:none; } 35% { transform:rotate(-.8deg); } 70% { transform:rotate(.8deg); } }
 .pop-say { font-size: 18px; stroke-width: 3px; fill: #fff8ea; }
 #shop-cat { cursor: pointer; }
 #shop-cat svg { pointer-events: none; }
 #shop-cat:focus-visible { outline: none; }
 .food-sprite { filter: none; }
-@media (prefers-reduced-motion: reduce) {
-  .guest-forearm { display: none !important; }
-}
