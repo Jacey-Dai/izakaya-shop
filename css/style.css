@@ -630,3 +630,33 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .plating { grid-template-columns: 1fr; }
   .plating-case { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 }
+
+/* T-62：微缩素材与局部动作。头部和衣服不再随切鱼动作拉伸。 */
+.chef-pose { display: none; }
+.chef-act:is(.act-slice,.act-nigiri,.act-serve) .chef-rest { display: none; }
+.chef-act.act-slice .pose-slice, .chef-act.act-nigiri .pose-nigiri, .chef-act.act-serve .pose-serve { display: inline; }
+.chef-act:is(.act-slice,.act-nigiri,.act-serve) { animation: none; }
+.chef-act.act-slice .chef-hands { animation: hands-slice .23s ease-in-out 3; }
+.chef-act.act-nigiri .chef-hands { animation: hands-shape .35s ease-in-out 2; transform-origin: 0 -35px; }
+.chef-act.act-serve .chef-hands { animation: hands-offer .9s ease-in-out; }
+@keyframes hands-slice { 50% { transform: translateY(-3px) rotate(-.5deg); } }
+@keyframes hands-shape { 50% { transform: scaleX(.96) translateY(-2px); } }
+@keyframes hands-offer { 50% { transform: translate(3px, 5px); } }
+.guest-forearm { display: none; transform-origin: 0 0; }
+.guest-doll:is(.act-chomp,.act-wave) .guest-forearm { display: inline; }
+.guest-doll.act-chomp { animation: guest-nod .6s ease-in-out; }
+.guest-doll.act-chomp .guest-forearm { animation: chopstick-lift .6s ease-in-out; }
+.guest-doll.act-wave { animation: none; }
+.guest-doll.act-wave .guest-forearm { animation: doll-wave .33s ease-in-out 3; }
+.guest-doll.act-wave .guest-chopsticks { display: none; }
+@keyframes guest-nod { 50% { transform: translateY(1px); } }
+@keyframes chopstick-lift { 0%,100% { transform: rotate(24deg); } 45%,65% { transform: rotate(-28deg) translateY(-5px); } }
+@keyframes doll-wave { 50% { transform: rotate(22deg); } }
+.pop-say { font-size: 18px; stroke-width: 3px; fill: #fff8ea; }
+#shop-cat { cursor: pointer; }
+#shop-cat svg { pointer-events: none; }
+#shop-cat:focus-visible { outline: none; }
+.food-sprite { filter: none; }
+@media (prefers-reduced-motion: reduce) {
+  .guest-forearm { display: none !important; }
+}

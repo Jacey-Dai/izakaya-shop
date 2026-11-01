@@ -5,6 +5,9 @@
  */
 window.I18N = {
   zh: {
+    "petcat.title": "店猫 · 小橘",
+    "petcat.hint": "轻轻摸摸它，听它回应",
+    "petcat.petted": "小橘眯起眼睛，轻轻喵了一声。",
     "room.counter": "吧台 · 灯火下的小舟",
     "room.tatami": "和室座敷 · 今晚慢慢吃",
     "room.back": "回到吧台席",
@@ -217,6 +220,9 @@ window.I18N = {
   },
 
   en: {
+    "petcat.title": "Shop cat · Mikan",
+    "petcat.hint": "Give the little cat a gentle pat",
+    "petcat.petted": "Mikan closes its eyes and gives a soft meow.",
     "room.counter": "Counter · A little warmth at Kobune",
     "room.tatami": "Tatami room · Settle in and stay awhile",
     "room.back": "Move to the counter",

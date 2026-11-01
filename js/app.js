@@ -246,6 +246,14 @@
       </svg>
       </g>
       ${extra}
+      <g class="guest-forearm-anchor" transform="translate(49 ${-height * .48})"><g class="guest-forearm" aria-hidden="true">
+        <defs><linearGradient id="${id}-sleeve"><stop stop-color="${opt("outfit").color}"/><stop offset=".45" stop-color="${opt("outfit").color}"/><stop offset="1" stop-color="#594238"/></linearGradient><radialGradient id="${id}-palm" cx=".3" cy=".25"><stop stop-color="#f9d5aa"/><stop offset="1" stop-color="#d9a171"/></radialGradient></defs>
+        <path d="M-10 4 Q-18 -14 -13 -30 Q-4 -38 9 -29 L13 -4 Q11 12 -10 4" fill="url(#${id}-sleeve)" filter="url(#kb-grain)"/>
+        ${[-24, -16, -8].map((y) => [-8, -1, 6].map((x) => `<path d="M${x} ${y} l2 3 l2 -3" fill="none" stroke="#fff6df" stroke-opacity=".18" stroke-width=".8"/>`).join("")).join("")}
+        <path d="M-10 -29 Q-11 -43 -4 -46 Q4 -51 10 -41 L11 -29 Q0 -24 -10 -29" fill="url(#${id}-palm)"/>
+        <path d="M-7 -31 Q1 -28 10 -31 M-9 -17 Q0 -13 11 -17" fill="none" stroke="#fff8e8" stroke-opacity=".25" stroke-width="1.5"/>
+        <g class="guest-chopsticks" stroke-linecap="round"><path d="M3 -41 L-29 -66 M7 -38 L-29 -61" stroke="#704326" stroke-width="2.5"/><path d="M3 -42 L-27 -65" stroke="#d9ae76" stroke-width=".8"/></g>
+      </g></g>
       <path class="guest-hit" d="M0 ${-height - 5} C-86 ${-height - 5} -86 ${-height + 115} 0 ${-height + 115} C86 ${-height + 115} 86 ${-height - 5} 0 ${-height - 5} Z M-42 -115 Q-78 -95 -${wear === "kimono" ? 90 : 73} -30 Q-85 10 0 2 Q85 10 ${wear === "kimono" ? 90 : 73} -30 Q78 -95 42 -115 Z" fill="transparent" stroke="transparent"/>
       </g>
     </g>`;
@@ -276,7 +284,12 @@
   // 原创手作人偶角色，场景与对话共用本地透明资源，无网络依赖。
   // 原点维持在台面中心；独立 SVG image 便于沿用原来的场景接口。
   function chefSVG() {
-    return `<image href="assets/art/haruta.webp" x="-140" y="-270" width="280" height="420" preserveAspectRatio="xMidYMid meet"/>`;
+    const id = "chef-layer-" + guestArtId++;
+    const poses = ["slice", "nigiri", "serve"].map((pose, i) => {
+      const frame = `<image x="-105" y="-270" width="210" height="340" preserveAspectRatio="none" href="assets/art/chef-${i}.webp"/>`;
+      return `<g class="chef-pose pose-${pose}" aria-hidden="true"><defs><clipPath id="${id}-${pose}-body"><path d="M-110 -275 H110 V-82 H-110 Z M-110 -17 H110 V80 H-110 Z"/></clipPath><clipPath id="${id}-${pose}-hands"><rect x="-110" y="-82" width="220" height="65"/></clipPath></defs><g clip-path="url(#${id}-${pose}-body)">${frame}</g><g class="chef-hands" clip-path="url(#${id}-${pose}-hands)">${frame}</g></g>`;
+    }).join("");
+    return `<g class="chef-rest"><image href="assets/art/haruta.webp" x="-140" y="-270" width="280" height="420" preserveAspectRatio="xMidYMid meet"/></g>${poses}`;
   }
 
   function toast(msg, gold = false) {
@@ -285,6 +298,66 @@
     el.textContent = msg;
     $("#toasts").appendChild(el);
     setTimeout(() => el.remove(), 2600);
+  }
+
+  // 店猫与招财猫分开。状态只在本次访问中存在，不改存档格式。
+  let catTimer = 0;
+  let catBusy = false;
+  function catPose(pose) {
+    const el = $("#shop-cat");
+    el.dataset.pose = String(pose);
+    el.innerHTML = `<ellipse cx="0" cy="-1" rx="37" ry="5" fill="#533b29" opacity=".18"/><image x="-43" y="-78" width="86" height="78" preserveAspectRatio="xMidYMax meet" href="assets/art/cat-${pose}.webp"/><ellipse class="hit-area" fill="transparent" stroke="transparent" cx="0" cy="-36" rx="43" ry="40"/>`;
+  }
+  function positionCat(room) {
+    clearTimeout(catTimer);
+    catBusy = false;
+    const el = $("#shop-cat");
+    if (!el) return;
+    el.getAnimations().forEach((a) => a.cancel());
+    el.setAttribute("transform", room === "tatami" ? "translate(398 684)" : "translate(935 760)");
+    catPose(room === "tatami" ? 3 : 0);
+    scheduleCat();
+  }
+  function scheduleCat() {
+    clearTimeout(catTimer);
+    catTimer = setTimeout(async () => {
+      if (document.hidden || reduceMotion() || catBusy) { scheduleCat(); return; }
+      catBusy = true;
+      const el = $("#shop-cat");
+      catPose(1);
+      const gait = setInterval(() => catPose(el.dataset.pose === "1" ? 2 : 1), 230);
+      // additive translation preserves the room anchor and travels only through empty floor.
+      const step = $(".scene").dataset.room === "counter" ? -45 : 45;
+      const motion = el.animate([{ translate: "0px 0px" }, { translate: `${step}px 0px` }, { translate: "0px 0px" }], { duration: 3800, easing: "ease-in-out" });
+      await motion.finished.catch(() => {});
+      clearInterval(gait);
+      if (catBusy) { catPose(3); catBusy = false; scheduleCat(); }
+    }, 22000);
+  }
+  let meowContext;
+  function petCat() {
+    clearTimeout(catTimer);
+    const el = $("#shop-cat");
+    el.getAnimations().forEach((a) => a.cancel());
+    catBusy = false;
+    catPose(4);
+    const room = $(".scene").dataset.room;
+    const [x, y] = room === "tatami" ? [398, 595] : [935, 670];
+    say(x, y, "にゃー");
+    announce(t("petcat.petted"));
+    // Sound is synthesized locally, only following an explicit click/key press.
+    const Audio = window.AudioContext || window.webkitAudioContext;
+    if (Audio) try {
+      meowContext = meowContext || new Audio();
+      meowContext.resume().catch(() => {});
+      const osc = meowContext.createOscillator(), gain = meowContext.createGain();
+      const now = meowContext.currentTime;
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(620, now); osc.frequency.exponentialRampToValueAtTime(940, now + .12); osc.frequency.exponentialRampToValueAtTime(390, now + .48);
+      gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(.045, now + .04); gain.gain.exponentialRampToValueAtTime(.001, now + .5);
+      osc.connect(gain).connect(meowContext.destination); osc.start(now); osc.stop(now + .52);
+    } catch { /* 无音频支持时仍有姿态与文字反馈 */ }
+    catTimer = setTimeout(() => { catPose(3); scheduleCat(); }, 1600);
   }
 
   // ---------- 人物动作（T-48） ----------
@@ -304,8 +377,21 @@
   }
   const inCounter = () => $(".scene").dataset.room === "counter";
   // 春田只在吧台视角里出现；座敷视角不做师傅动作
-  const chefAct = (cls, ms) => (inCounter() ? play($(".chef-act"), cls, ms) : wait(0));
-  const guestAct = (cls, ms) => play($("#guest .guest-doll"), cls, ms);
+  const actorQueues = new WeakMap();
+  function queueAction(el, cls, ms) {
+    if (!el) return wait(0);
+    const next = (actorQueues.get(el) || Promise.resolve()).catch(() => {}).then(async () => {
+      if (!el.isConnected) return;
+      el.classList.remove("act-bow", "act-slice", "act-nigiri", "act-serve", "act-wave", "act-chomp", "act-happy", "act-sit");
+      if (reduceMotion()) return;
+      await play(el, cls, ms);
+      el.classList.remove(cls);
+    });
+    actorQueues.set(el, next);
+    return next;
+  }
+  const chefAct = (cls, ms) => (inCounter() ? queueAction($(".chef-act"), cls, ms) : wait(0));
+  const guestAct = (cls, ms) => queueAction($("#guest .guest-doll"), cls, ms);
 
   // 人物头顶冒出的拟声词（日语，中英界面相同）
   function say(x, y, text) {
@@ -407,7 +493,15 @@
       const left = $$(".bite", dish).filter((b) => b.getAttribute("display") !== "none");
       guestSay("もぐもぐ");
       guestAct("act-chomp", 600);
-      await animate(left[0], [{ opacity: 1 }, { transform: "translate(0px, -40px) scale(.6)", opacity: 0 }], 450);
+      // 把盘面坐标转换成当前客人嘴边的位置，座敷和吧台使用同一路径。
+      const seat = shownSeat();
+      const mouth = new DOMPoint(seat.marker[0] + 28, seat.marker[1] - (seat.id === "counter" ? 137 : 151));
+      const target = mouth.matrixTransform($(".scene").getScreenCTM()).matrixTransform(left[0].getScreenCTM().inverse());
+      const box = left[0].getBBox();
+      const dx = target.x - box.x - box.width / 2, dy = target.y - box.y - box.height / 2;
+      left[0].style.transformBox = "fill-box";
+      left[0].style.transformOrigin = "center";
+      await animate(left[0], [{ opacity: 1 }, { transform: `translate(${dx * .55}px, ${dy * .55 - 15}px) scale(.8)`, opacity: 1, offset: .6 }, { transform: `translate(${dx}px, ${dy}px) scale(.45)`, opacity: 0 }], 450);
       left[0].setAttribute("display", "none");
       dishState.eaten += 1;
       if (left.length > 1) announce(t("live.left", { n: left.length - 1 }));
@@ -539,6 +633,8 @@
     $("#back-counter").hidden = room !== "tatami";
     $(".room-bar").hidden = room !== "tatami";
     if (changed) {
+      $$(".pop-say").forEach((el) => el.remove());
+      positionCat(room);
       placeDish(room);
       $("#tooltip").hidden = true;
       $$(".hotspot.linked").forEach((el) => el.classList.remove("linked"));
@@ -1828,7 +1924,7 @@
     // 盘子不开弹窗，点一下吃一贯
     // 当厨师时：点春田或客人看订单，点鱼柜去摆盘
     const route = () => (isChef() && { chef: "chefOrder", guest: "chefOrder", fishcase: "plating" }[id]) || id;
-    const activate = () => { tip.hidden = true; if (id === "dish") { if (!isChef()) eatDish(); } else open(route()); };
+    const activate = () => { tip.hidden = true; if (id === "petcat") petCat(); else if (id === "dish") { if (!isChef()) eatDish(); } else open(route()); };
     el.addEventListener("click", activate);
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); }
@@ -1838,6 +1934,7 @@
   function hotspotInfo(id) {
     if (id === "dish" && dishState.mode === "takeout") id = "dishTakeout";
     if (id === "guest" && isChef()) id = "npc";
+    if (id === "petcat") return { title: t("petcat.title"), hint: t("petcat.hint") };
     const zh = D.hotspots[id];
     return { title: tx("hotspots", id, "title", zh.title), hint: tx("hotspots", id, "hint", zh.hint) };
   }
@@ -1881,6 +1978,7 @@
     if (state.seat) guestAct("act-wave", 1000);
   }, 500);
   setTimeout(maybeBirthday, 1800);
+  positionCat($(".scene").dataset.room);
   renderAtmosphere();
   if (festival) setTimeout(() => toast(t("fest.toast", { name: festText(festival, "name") }), true), 1200);
   if (rainy) setTimeout(() => toast(t("rain.toast")), festival ? 2000 : 1200);

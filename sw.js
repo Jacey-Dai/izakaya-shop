@@ -3,7 +3,7 @@
  * 页面本身走“网络优先”，断网时用缓存；其余同源文件走“缓存优先”，没有时再联网并存一份。
  * 发布新版本时把 VERSION 改成和 index.html 的 ?v= 一样，旧缓存会在激活时删掉。
  */
-const VERSION = "20261031-9";
+const VERSION = "20261101-1";
 const CACHE = "kobune-" + VERSION;
 const CORE = [
   "./",
@@ -20,6 +20,27 @@ const CORE = [
   "assets/art/izakaya-room.webp",
   "assets/art/tatami-room.webp",
   "assets/art/haruta.webp",
+  "assets/art/cat-0.webp",
+  "assets/art/cat-1.webp",
+  "assets/art/cat-2.webp",
+  "assets/art/cat-3.webp",
+  "assets/art/cat-4.webp",
+  "assets/art/cat-5.webp",
+  "assets/art/chef-0.webp",
+  "assets/art/chef-1.webp",
+  "assets/art/chef-2.webp",
+  "assets/art/food-0.webp",
+  "assets/art/food-1.webp",
+  "assets/art/food-2.webp",
+  "assets/art/food-3.webp",
+  "assets/art/food-4.webp",
+  "assets/art/food-5.webp",
+  "assets/art/food-6.webp",
+  "assets/art/food-7.webp",
+  "assets/art/food-8.webp",
+  "assets/art/food-9.webp",
+  "assets/art/food-10.webp",
+  "assets/art/food-11.webp",
   "assets/art/guest-dolls.webp",
   "assets/art/guest-accessories.webp",
 ];
