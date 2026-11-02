@@ -487,6 +487,7 @@ CartLine 结构：`{ key, kind: "item" | "plate" | "omakase", price, qty, fish: 
 | T-62 | 已确认设计稿落地：寿司、店猫、客人和分层精细动作统一为微缩手作风 | 完成（PR #17 已合并） | Jacey 已确认概念稿并授权推送 | art.js、app.js、assets/art、css、tests | 保留鱼种、角色换装和新增玩法；店猫可交互；手部道具动作；减少动态效果；离线素材齐全 |
 | T-63 | 修复客人拼接坐姿和断臂动作，统一万圣节与雨景材质 | 完成（PR #18 已合并） | Jacey 反馈 | assets/art、app.js、art.js、css、tests | 完整坐姿无拼腿；打招呼不突然增加手臂；南瓜与雨景贴合微缩材质；保留双语和离线 |
 | T-64 | 修正背影坐姿脚跟方向与凳面遮挡 | 已实现并验证，待 PR 合并（@Codex/fix/T-64-rear-seated-anatomy） | Jacey 截图反馈 | assets/art、app.js、tests | 不见正面脚背 / 鞋带；大腿朝向吧台；脚跟位于凳面后方；凳面与臀部接触正确 |
+| T-65 | 饮品酒架与一品料理 / 甘味菜单按已确认设计重制 | 进行中（@Codex/feat/T-65-tactile-menus） | Jacey 授权实施 | app.js、css、assets/art、i18n、tests | 实物杯盏与料理；分类导航；原价格和点单保持；双语 / 手机 / 离线 |
 
 ### 想法池（未评估）
 - 不做（Jacey 2026-10-31）：女将 / 店员 NPC、吃法小课堂、寿司小测验
