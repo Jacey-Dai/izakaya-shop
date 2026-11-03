@@ -209,47 +209,6 @@ button { font: inherit; cursor: pointer; }
 .menu-item .dish { width: 44px; height: 44px; display: grid; place-items: center; }
 .got { font-size: 11px; color: var(--shu); border: 1px solid var(--shu); border-radius: 4px; padding: 0 4px; margin-left: 6px; }
 
-/* 木札 */
-.modal.tags { background: #e9dcc0; }
-.tag-wall { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding-top: 8px; }
-.wood-tag {
-  writing-mode: vertical-rl; text-orientation: upright;
-  background: linear-gradient(90deg, #e8cf9a, #f1dcb0 50%, #e2c48a);
-  border: 1px solid #8b5a2b; border-radius: 4px 4px 2px 2px;
-  padding: 18px 10px; min-height: 220px; font-size: 20px; letter-spacing: 3px;
-  color: #3b2414; position: relative; font-family: var(--font-body); font-weight: 600;
-  box-shadow: 0 4px 0 #b08a55;
-  transition: transform .15s;
-}
-.wood-tag::before {
-  content: ""; position: absolute; top: 6px; left: 50%; width: 6px; height: 6px;
-  margin-left: -3px; background: #5a3a20; border-radius: 50%;
-}
-.wood-tag:hover { transform: rotate(-3deg) translateY(-2px); }
-.wood-tag small { font-size: 14px; color: var(--shu); text-orientation: mixed; margin-top: 8px; font-weight: 400; }
-.wood-tag.sweet { background: linear-gradient(90deg, #f0c4b4, #f8d9cc 50%, #e9b3a0); }
-
-/* 酒单 */
-.drink-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-.drink {
-  background: #fff9ec; border: 1px solid #d8c8a6; border-radius: 8px; padding: 14px; text-align: center;
-  transition: transform .15s, box-shadow .15s;
-}
-.drink:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0, 0, 0, .12); }
-.bottle {
-  width: 30px; height: 64px; margin: 0 auto 10px; border-radius: 6px 6px 8px 8px; position: relative;
-  background: var(--c); border: 1px solid rgba(0, 0, 0, .2);
-}
-.bottle::before {
-  content: ""; position: absolute; top: -14px; left: 50%; width: 10px; height: 16px; margin-left: -5px;
-  background: var(--c); border: 1px solid rgba(0, 0, 0, .2); border-bottom: none; border-radius: 3px 3px 0 0;
-}
-.bottle::after {
-  content: ""; position: absolute; left: 4px; right: 4px; top: 22px; height: 22px; background: #f6efdf; border-radius: 2px;
-}
-.drink b { display: block; }
-.drink span { display: block; font-size: 12px; color: var(--sumi-soft); margin: 2px 0 8px; }
-
 /* 师傅 */
 .chef-wrap { display: grid; grid-template-columns: 140px 1fr; gap: 20px; align-items: start; }
 .chef-portrait { width: 140px; height: 140px; border-radius: 50%; background: #e9dcc0; overflow: hidden; }
@@ -486,12 +445,11 @@ button { font: inherit; cursor: pointer; }
 .chef-portrait { width: 140px; height: 150px; border-radius: 28px; background: #f4e6d1; border: 1px solid #d9c2a0; }
 .tab.active, .mode.active, .filter button.active { background: var(--ai); color: #fff9ef; }
 .tabs { border-bottom-color: #d5bfa1; }
-.fish-btn, .drink, .seat-card, .card { border-radius: 16px; background: linear-gradient(140deg, #fffdf8, #f6ecd9); box-shadow: 0 3px 0 #dec9a9, inset 0 1px 0 #fff; }
+.fish-btn, .seat-card, .card { border-radius: 16px; background: linear-gradient(140deg, #fffdf8, #f6ecd9); box-shadow: 0 3px 0 #dec9a9, inset 0 1px 0 #fff; }
 .fish-btn:hover, .seat-card:hover { border-color: #ae7752; }
 .card.locked { background: #eae0ce; }
 .art { overflow: visible; filter: drop-shadow(1px 3px 2px #704b2a22); }
 .plate { background: radial-gradient(circle at 43% 35%, #fffdf7 0 48%, #f2e7d3 56%, #cec8bd 59%, #59677e 60% 62%, #fffaf0 63% 66%, #d1c6b5 67%); box-shadow: 0 12px 24px #5c432727, inset -4px -5px 7px #ad9d8633; }
-.bottle { background: linear-gradient(90deg, #00000024, #ffffff44 30%, transparent 58%, #00000033), var(--c); box-shadow: 2px 3px 3px #5d48312b; }
 .guest-preview { background: radial-gradient(ellipse at 50% 30%, #fffbf2, #e6d2b3); border: 1px solid #dcc5a5; }
 button:focus-visible, .link:focus-visible { outline: 3px solid #686d50; outline-offset: 4px; }
 @media (max-width: 600px) {
@@ -651,3 +609,90 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 /* T-64：凳面、凳腿和被遮挡的小腿固定，只有坐姿上半身参与问候。 */
 .guest-upper { transform-box: view-box; transform-origin: 0 0; }
 .guest-stool-fixed { pointer-events:none; }
+
+/* T-65 · 杯盏酒架与一品 / 甘味：真实素材、可读纸签、紧凑点单。 */
+.modal.tactile-menu { width:min(1180px,100%); padding:30px 30px 0; border:1px solid #e0c9a9; border-radius:26px; background:radial-gradient(ellipse at 15% 0,#fffdf6aa,transparent 60%),repeating-linear-gradient(102deg,#f9f0df22 0 1px,transparent 1px 5px),#fbf3e5; box-shadow:0 24px 80px #2f201b66,inset 0 1px #fffdf9; }
+.tactile-menu #modal-close { z-index:3; right:14px; top:14px; width:34px; height:34px; font-size:22px; border:1px solid #d9bd93; background:#efddbd; box-shadow:0 2px 0 #b9905e33; }
+.tactile-header { display:flex; align-items:center; gap:22px; padding:0 32px 24px 0; border-bottom:1px solid #d8c1a2; }
+.menu-noren { flex:none; width:76px; min-height:104px; margin-top:-31px; padding:22px 8px 12px; color:#f8e6c2; text-align:center; background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 3px),linear-gradient(105deg,#233b51,#344b5e 50%,#203448); box-shadow:2px 4px 5px #40342122; border-radius:0 0 9px 5px; transform:rotate(-1deg); border:1px solid #ffffff15; }
+.menu-noren span { font:30px var(--font-brush); display:block; border-bottom:1px dashed #d8c4a15e; margin-bottom:5px; }
+.menu-noren b { display:block; font:22px var(--font-brush); letter-spacing:4px; }
+.menu-noren small { font-size:10px; letter-spacing:1.5px; }
+.tactile-title { flex:1; }
+.tactile-title h2 { margin:0; font-size:39px; letter-spacing:3px; color:#483422; line-height:1.35; }
+.tactile-title p { margin:5px 0 0; font-size:13px; color:#887158; }
+.tactile-title .menu-eyebrow { font-size:10px; letter-spacing:2px; color:#9b7852; margin:0 0 4px; }
+.tactile-tabs { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; align-self:flex-end; }
+.tactile-tabs button { border:0; border-bottom:2px solid transparent; background:none; padding:10px 9px; color:#826b55; font:inherit; font-size:14px; cursor:pointer; }
+.tactile-tabs button[aria-pressed="true"] { color:#2c4659; border-bottom-color:#2c4659; font-weight:700; }
+.tactile-tabs button:hover { background:#e9d8bd44; }
+.tactile-tabs small { display:block; font-size:10px; opacity:.65; margin-top:3px; }
+.drink-shelves { display:grid; gap:22px; padding-top:8px; }
+.drink-shelf { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); position:relative; padding:8px 0 18px; }
+.drink-shelf::after, .shelf-drink::after { content:""; position:absolute; height:16px; bottom:0; left:-8px; right:-8px; border-radius:3px 3px 5px 5px; background:linear-gradient(#edbc7980,transparent 22%,#8b542633 70%,#77452080),url('../assets/art/menu-oak.webp') center/420px 28px; box-shadow:0 8px 9px #72503122,0 2px 1px #7f492f55; border-top:1px solid #edc999; }
+.shelf-drink { min-width:0; position:relative; display:grid; grid-template-columns:48% 52%; align-items:end; padding:14px 8px 0; min-height:210px; }
+.shelf-drink::after { display:none; }
+.menu-object { min-width:0; display:flex; align-items:flex-end; justify-content:center; }
+.menu-object img { max-width:100%; width:100%; object-fit:contain; display:block; filter:drop-shadow(0 5px 3px #6e48271b); }
+.shelf-drink .menu-object img { height:180px; }
+.menu-item-copy { padding:0 6px 18px 10px; min-width:0; }
+.menu-item-heading { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; column-gap:8px; row-gap:2px; }
+.menu-item-heading h3 { font-family:var(--font-brush); font-size:21px; line-height:1.4; margin:0; color:#493320; overflow-wrap:anywhere; }
+.menu-item-heading .price { font-size:20px; white-space:nowrap; color:#ad5134; }
+.menu-local-name { font-size:12px; color:#6c5743; margin:7px 0 4px; }
+.menu-serving { font-size:12px; color:#88735e; margin:0 0 8px; line-height:1.6; }
+.tactile-menu .menu-order { display:inline-flex; min-height:35px; padding:6px 15px; margin-top:8px; background:#ac5235; border:1px solid #a45336; border-radius:9px; color:#fff9ee; font-size:13px; box-shadow:0 2px 0 #7c3f2729,inset 0 1px #d7876555; }
+.tactile-menu .menu-order:hover { background:#8e432e; }
+.dish-gallery { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:32px; row-gap:16px; padding:24px 0; }
+.plated-dish { display:grid; grid-template-columns:55% 45%; align-items:center; min-width:0; border-bottom:1px solid #dfceb433; padding-bottom:10px; }
+.plated-dish .menu-object img { height:210px; }
+.dessert-gallery { padding:32px 0 36px; }
+.dessert-gallery .menu-object img { height:265px; }
+.plated-dish .menu-item-copy { padding-bottom:0; }
+.plated-dish .menu-item-heading { display:block; }
+.plated-dish .menu-item-heading h3 { font-size:24px; }
+.plated-dish .price { display:block; margin-top:8px; font-size:24px; }
+.tactile-footer { position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:24px -30px 0; padding:15px 30px; border-top:1px solid #d9c5a8; background:#fbf3e5f5; backdrop-filter:blur(10px); z-index:2; border-radius:0 0 25px 25px; color:#775c42; font-size:14px; }
+.tactile-footer .btn { padding:8px 20px; font-size:14px; border-radius:9px; }
+@media(max-width:1000px) {
+  .tactile-header { flex-wrap:wrap; gap:16px; }
+  .tactile-tabs { margin-left:auto; }
+  .drink-shelves { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+  .drink-shelf { display:contents; }
+  .drink-shelf::after { display:none; }
+  .shelf-drink { padding-bottom:20px; }
+  .shelf-drink::after { display:block; left:0; right:0; }
+  .dish-gallery { column-gap:16px; }
+  .plated-dish { grid-template-columns:1fr; text-align:center; }
+  .plated-dish .menu-item-copy { padding:4px 12px 14px; }
+}
+@media(max-width:600px) {
+  .modal.tactile-menu { padding:22px 18px 0; border-radius:20px; }
+  .tactile-header { padding-right:18px; padding-bottom:14px; gap:13px; }
+  .menu-noren { width:58px; min-height:90px; margin-top:-23px; padding:14px 5px 9px; }
+  .menu-noren span { font-size:25px; }
+  .menu-noren b { font-size:18px; }
+  .menu-noren small { font-size:8px; }
+  .tactile-title h2 { font-size:30px; letter-spacing:1px; }
+  .tactile-title p { font-size:11px; }
+  .tactile-title .menu-eyebrow { font-size:8px; letter-spacing:1px; }
+  .tactile-tabs { width:100%; justify-content:center; margin:0; gap:7px; }
+  .tactile-tabs button { font-size:13px; padding:8px; }
+  .drink-shelves { grid-template-columns:1fr; gap:14px; padding-top:2px; }
+  .shelf-drink { min-height:195px; grid-template-columns:47% 53%; padding:8px 0 20px; }
+  .shelf-drink .menu-object img { height:165px; }
+  .menu-item-heading h3 { font-size:21px; }
+  .menu-item-heading { display:block; }
+  .menu-item-heading .price { display:block; margin-top:5px; }
+  .menu-item-copy { padding:0 0 12px 12px; }
+  .dish-gallery { grid-template-columns:1fr; padding:18px 0 4px; row-gap:18px; }
+  .plated-dish { grid-template-columns:52% 48%; text-align:left; }
+  .plated-dish .menu-object img, .dessert-gallery .menu-object img { height:190px; }
+  .plated-dish .menu-item-copy { padding:0 0 12px 10px; }
+  .plated-dish .menu-item-heading h3 { font-size:21px; }
+  .tactile-footer { margin:18px -18px 0; padding:13px 18px; font-size:12px; }
+  .tactile-footer .btn { padding:8px 13px; font-size:12px; }
+}
+
+.modal.tactile-menu { scroll-padding-bottom:90px; }
+.tactile-menu .menu-order { scroll-margin-bottom:90px; }

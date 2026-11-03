@@ -5,6 +5,19 @@
  */
 window.I18N = {
   zh: {
+    "tactile.add": "加入订单",
+    "tactile.kitchen": "小舟的厨房",
+    "tactile.cellar": "小舟的酒与茶",
+    "tactile.foodSub": "一品料理与甘味，慢慢挑，慢慢尝。",
+    "tactile.drinkSub": "酒与茶，陪你慢慢度过今晚。",
+    "tactile.categories": "菜单分类",
+    "tactile.all": "全部",
+    "tactile.alcohol": "酒",
+    "tactile.soft": "无酒精",
+    "tactile.tea": "茶",
+    "tactile.count": "当前订单 {n} 件",
+    "tactile.cart": "查看订单",
+
     "petcat.title": "店猫 · 小橘",
     "petcat.hint": "轻轻摸摸它，听它回应",
     "petcat.petted": "小橘眯起眼睛，轻轻喵了一声。",
@@ -220,6 +233,19 @@ window.I18N = {
   },
 
   en: {
+    "tactile.add": "Add to order",
+    "tactile.kitchen": "From the kitchen",
+    "tactile.cellar": "Sake & tea",
+    "tactile.foodSub": "Small dishes and something sweet, made for a slow evening.",
+    "tactile.drinkSub": "A little sake, a cup of tea. Stay a while.",
+    "tactile.categories": "Menu categories",
+    "tactile.all": "All",
+    "tactile.alcohol": "Alcohol",
+    "tactile.soft": "Alcohol-free",
+    "tactile.tea": "Tea",
+    "tactile.count": "Your order · {n} items",
+    "tactile.cart": "View order",
+
     "petcat.title": "Shop cat · Mikan",
     "petcat.hint": "Give the little cat a gentle pat",
     "petcat.petted": "Mikan closes its eyes and gives a soft meow.",
