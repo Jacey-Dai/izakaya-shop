@@ -745,7 +745,13 @@
   // 弹窗内的通用按钮：data-add / data-open
   body.addEventListener("click", (e) => {
     const add = e.target.closest("[data-add]");
-    if (add) { addMenuItem(add.dataset.add); return; }
+    if (add) {
+      // 连续点单保留最近一条反馈，避免提示堆叠挡住杯盏和按钮。
+      if (current === "drinks" || current === "tags") $$(".toast", $("#toasts")).forEach((el) => el.remove());
+      addMenuItem(add.dataset.add);
+      $$("[data-menu-count]", body).forEach((el) => { el.textContent = t("tactile.count", { n: menuCount() }); });
+      return;
+    }
     const set = e.target.closest("[data-set]");
     if (set) { addSet(set.dataset.set); return; }
     const go = e.target.closest("[data-open]");
@@ -1160,40 +1166,46 @@
       <p class="board-note">— 今日も元気に営業中 —</p>`,
   };
 
-  // 墙上木札：一品料理 + 甜品
+  // T-65：素材只负责杯盏 / 料理，名称、价格、分类与下单均为真实 DOM。
+  let drinkFilter = "all";
+  let dishSection = "sweet";
+  const menuCount = () => state.cart.reduce((n, line) => n + line.qty, 0);
+  const tactileFooter = () => `<footer class="tactile-footer"><span data-menu-count aria-live="polite">${t("tactile.count", { n: menuCount() })}</span><button class="btn primary" data-open="cart">${t("tactile.cart")} <span aria-hidden="true">›</span></button></footer>`;
+  const menuBrand = () => `<div class="menu-noren" aria-hidden="true"><span>舟</span><b>小舟</b><small>Kobune</small></div>`;
+  function menuItemHTML(it, kind) {
+    return `<article class="${kind === "drink" ? "shelf-drink" : "plated-dish"}" data-menu-item="${it.id}">
+      <div class="menu-object"><img src="assets/art/menu-${it.id}.webp" width="400" height="400" alt="" decoding="async"></div>
+      <div class="menu-item-copy"><div class="menu-item-heading"><h3 lang="ja">${it.jp}</h3><strong class="price">${rmb(it.price)}</strong></div><p class="menu-local-name">${itemName(it)}</p>${itemDesc(it) ? `<p class="menu-serving">${itemDesc(it)}</p>` : ""}<button class="btn menu-order" data-add="${it.id}" aria-label="${itemName(it)} · ${t(kind === "drink" ? "drinks.order" : "tactile.add")}">${t(kind === "drink" ? "drinks.order" : "tactile.add")}</button></div>
+    </article>`;
+  }
+  function mountMenuFilters() {
+    $$("[data-menu-filter]", body).forEach((button) => button.addEventListener("click", () => {
+      const value = button.dataset.menuFilter;
+      if (current === "drinks") drinkFilter = value;
+      else dishSection = value;
+      rerender();
+      $(`[data-menu-filter="${value}"]`, body).focus();
+    }));
+  }
   views.tags = {
+    cls: "tactile-menu food-menu",
     render: () => {
-      const hot = D.menu.find((c) => c.id === "hot").items;
-      const sweet = D.menu.find((c) => c.id === "sweet").items;
-      const tag = (it, cls = "") => `<button class="wood-tag ${cls}" data-add="${it.id}" title="${itemName(it)}${itemDesc(it) ? " · " + itemDesc(it) : ""}">${it.jp}<small>${rmb(it.price)}</small></button>`;
-      return `
-        <h2>お品書き</h2>
-        <p class="sub">${t("tags.sub")}</p>
-        <div class="tag-wall">${hot.map((it) => tag(it)).join("")}${sweet.map((it) => tag(it, "sweet")).join("")}</div>`;
+      const category = D.menu.find((c) => c.id === dishSection);
+      return `<section aria-labelledby="tactile-title"><header class="tactile-header">${menuBrand()}<div class="tactile-title"><p class="menu-eyebrow">KOBUNE · ${t("tactile.kitchen")}</p><h2 id="tactile-title" lang="ja">お品書き</h2><p>${t("tactile.foodSub")}</p></div><nav class="tactile-tabs" aria-label="${t("tactile.categories")}">${["hot", "sweet"].map((id) => `<button data-menu-filter="${id}" aria-pressed="${dishSection === id}">${catName(D.menu.find((c) => c.id === id))}${catName(D.menu.find((c) => c.id === id)) === (id === "hot" ? "一品料理" : "甘味") ? "" : `<small lang="ja">${id === "hot" ? "一品料理" : "甘味"}</small>`}</button>`).join("")}</nav></header>
+        <div class="dish-gallery ${dishSection === "sweet" ? "dessert-gallery" : ""}" aria-label="${catName(category)}">${category.items.map((it) => menuItemHTML(it, "dish")).join("")}</div>${tactileFooter()}</section>`;
     },
+    mount: mountMenuFilters,
   };
-
-  // 酒架
   views.drinks = {
-    cls: "book",
+    cls: "tactile-menu drinks-menu",
     render: () => {
-      const items = D.menu.find((c) => c.id === "drinks").items;
-      return `
-        <h2>お飲み物</h2>
-        <p class="sub">${t("drinks.sub")}</p>
-        <div class="drink-grid">
-          ${items.map((it) => `
-            <div class="drink">
-              <div class="bottle" style="--c:${it.bottle}"></div>
-              <b>${it.jp}</b>
-              <span>${itemName(it)} · ${itemDesc(it)}</span>
-              <div class="price">${rmb(it.price)}</div>
-              <div class="btn-row" style="justify-content:center;margin-top:8px">
-                <button class="btn" data-add="${it.id}">${t("drinks.order")}</button>
-              </div>
-            </div>`).join("")}
-        </div>`;
+      const ids = { alcohol: ["sake", "umeshu", "beer"], soft: ["matcha", "yuzu", "hojicha"], tea: ["matcha", "hojicha"] };
+      const items = D.menu.find((c) => c.id === "drinks").items.filter((it) => drinkFilter === "all" || ids[drinkFilter].includes(it.id));
+      const shelves = [];
+      for (let i = 0; i < items.length; i += 3) shelves.push(`<div class="drink-shelf">${items.slice(i, i + 3).map((it) => menuItemHTML(it, "drink")).join("")}</div>`);
+      return `<section aria-labelledby="tactile-title"><header class="tactile-header">${menuBrand()}<div class="tactile-title"><p class="menu-eyebrow">KOBUNE · ${t("tactile.cellar")}</p><h2 id="tactile-title" lang="ja">お飲み物</h2><p>${t("tactile.drinkSub")}</p></div><nav class="tactile-tabs" aria-label="${t("tactile.categories")}">${["all", "alcohol", "soft", "tea"].map((id) => `<button data-menu-filter="${id}" aria-pressed="${drinkFilter === id}">${t("tactile." + id)}</button>`).join("")}</nav></header><div class="drink-shelves">${shelves.join("")}</div>${tactileFooter()}</section>`;
     },
+    mount: mountMenuFilters,
   };
 
   // 桌面菜单：分页签的菜单册
